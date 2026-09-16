@@ -59,7 +59,15 @@ module Buzzsprout
       end
 
       def default_podcast_id
-        ENV['BUZZSPROUT_PODCAST_ID'] || loaded[:default_podcast_id] || loaded[:podcast_id]
+        ENV['BUZZSPROUT_PODCAST_ID'] || saved_podcast_id
+      end
+
+      # File-backed default only (not BUZZSPROUT_PODCAST_ID, which is per-process).
+      def saved_podcast_id
+        value = loaded[:default_podcast_id] || loaded[:podcast_id]
+        return if value.nil? || value.to_s.empty?
+
+        value
       end
 
       def require_token!

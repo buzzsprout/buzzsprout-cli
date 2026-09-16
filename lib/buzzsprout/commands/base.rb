@@ -49,8 +49,9 @@ module Buzzsprout
       end
 
       # 1. Explicit positional / --podcast / --in / BUZZSPROUT_PODCAST_ID
-      # 2. Interactive picker on a TTY (saved default only pre-highlights)
-      # 3. Noninteractive: saved default, else a clear error (never blocks)
+      # 2. Saved default (skip picker) unless persist:true (`buzzsprout use`)
+      # 3. Interactive picker on a TTY, then save as default
+      # 4. Noninteractive: saved default, else a clear error (never blocks)
       def resolve_podcast_id!(persist: false)
         explicit = take_explicit_podcast_id
         if explicit
@@ -58,14 +59,21 @@ module Buzzsprout
           return explicit
         end
 
-        if interactive_podcast_picker?
-          chosen = pick_podcast!(announce: !persist)
-        else
-          chosen = noninteractive_podcast
+        unless persist
+          default = Config.saved_podcast_id
+          return default if default
         end
 
-        Config.save(default_podcast_id: chosen['id']) if persist
-        chosen['id']
+        if interactive_podcast_picker?
+          chosen = pick_podcast!(announce: !persist)
+          Config.save(default_podcast_id: chosen['id'])
+          return chosen['id']
+        end
+
+        default = Config.saved_podcast_id
+        return default if default
+
+        raise PodcastPicker::MISSING_ID
       end
 
       def interactive_podcast_picker?
@@ -84,20 +92,11 @@ module Buzzsprout
           podcasts,
           io: @io,
           stdin: @stdin,
-          default_id: Config.default_podcast_id,
+          default_id: Config.saved_podcast_id,
           auto_single: false
         )
         announce_podcast(chosen) if announce
         chosen
-      end
-
-      def noninteractive_podcast
-        default = Config.default_podcast_id
-        if default && !default.to_s.empty?
-          return { 'id' => default, 'title' => nil }
-        end
-
-        raise PodcastPicker::MISSING_ID
       end
 
       def take_explicit_podcast_id

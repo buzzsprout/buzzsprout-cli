@@ -11,6 +11,8 @@ module Buzzsprout
 
     MISSING_ID = 'Podcast id required. Pass --podcast ID (or --in ID), or run `buzzsprout use`.'
     WINDOW = 12
+    # Title, search line, hints. Reserve this plus WINDOW so redraws never scroll.
+    CHROME = 3
 
     attr_reader :filter, :index, :podcasts
 
@@ -20,7 +22,7 @@ module Buzzsprout
       @stdin = stdin
       @filter = +''
       @index = initial_index(default_id)
-      @frame_height = nil
+      @origin_saved = false
       @selected = nil
     end
 
@@ -110,6 +112,7 @@ module Buzzsprout
       items = filtered
       lines = []
       lines << Color.bold('Select a podcast', io: @io)
+      lines << search_line
       if items.empty?
         lines << Color.dim('  (no matches)', io: @io)
       else
@@ -119,9 +122,7 @@ module Buzzsprout
           lines << format_row(podcast, active)
         end
       end
-      lines << ''
-      lines << filter_line
-      lines << Color.dim('↑/↓ move  type to filter  Enter select  Esc cancel', io: @io)
+      lines << Color.dim('↑/↓ move  type to search  Enter select  Esc cancel', io: @io)
       lines
     end
 
@@ -183,9 +184,9 @@ module Buzzsprout
       "\e[38;2;#{r};#{g};#{b}m"
     end
 
-    def filter_line
+    def search_line
       caret = Color.enabled?(@io) ? Color.paint('█', Color::DIM, io: @io) : '_'
-      "Filter: #{@filter}#{caret}"
+      "Search: #{@filter}#{caret}"
     end
 
     def truncate(text, width = 64)
@@ -194,19 +195,33 @@ module Buzzsprout
       "#{text[0, width - 1]}…"
     end
 
+    # Saved-cursor redraw (DECSC/DECRC + ED). CSI-A by logical line count
+    # stair-steps when a row wraps or the screen scrolls.
     def render
-      erase if @frame_height
-      lines = build_lines
-      lines.each { |line| @io.puts line }
+      if @origin_saved
+        @io.print "\e8\e[u\r"
+      else
+        height = WINDOW + CHROME
+        height.times { @io.print "\n" }
+        @io.print "\e[#{height}A\r\e7\e[s"
+        @origin_saved = true
+      end
+      paint_lines(build_lines)
+      @io.print "\e[0J"
       @io.flush if @io.respond_to?(:flush)
-      @frame_height = lines.size
+    end
+
+    def paint_lines(lines)
+      lines.each do |line|
+        @io.print "\r\e[2K#{line}\e[0m\n"
+      end
     end
 
     def erase
-      return unless @frame_height&.positive?
+      return unless @origin_saved
 
-      @io.print "\e[#{@frame_height}A\r\e[0J"
-      @frame_height = nil
+      @io.print "\e8\e[u\e[0m\e[0J"
+      @origin_saved = false
     end
 
     def with_raw

@@ -23,7 +23,15 @@ module Buzzsprout
     end
   end
 
-  def test_require_token_without_config
+  def test_saved_podcast_id_ignores_env_override
+    with_config do
+      Config.save(api_token: 'secret-token', default_podcast_id: 10)
+      ENV['BUZZSPROUT_PODCAST_ID'] = '99'
+      Config.clear_cache
+      assert_equal 10, Config.saved_podcast_id
+      assert_equal '99', Config.default_podcast_id
+    end
+  end
     with_config do
       error = assert_raises(RuntimeError) { Config.require_token! }
       assert_match(/buzzsprout login/, error.message)

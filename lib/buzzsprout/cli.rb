@@ -36,7 +36,7 @@ module Buzzsprout
         login, auth, init     Logo animation, prompt for API token, test GET /podcasts
         logout                Remove ~/.buzzsprout.json
         status, whoami        Show whether a token is saved
-        use [podcast_id]      Remember a default podcast (picker if omitted)
+        use [podcast_id]      Set the saved podcast (picker if omitted)
 
       Podcasts & episodes
         podcasts [list]

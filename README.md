@@ -87,7 +87,7 @@ With no config yet, `buzzsprout` (or `buzzsprout login`) will:
    Accept: application/json
    ```
 
-4. On success: a short ASCII confetti burst (TTY only), then celebrate, **pick a podcast** if you have more than one (arrow keys, type to filter, Enter), and save the token to `~/.buzzsprout.json` (mode `0600`)
+4. On success: a short ASCII confetti burst (TTY only), then celebrate, **pick a podcast** if you have more than one (arrow keys, type to search, Enter), and save the token to `~/.buzzsprout.json` (mode `0600`)
 5. On failure: print a clear error and offer to retry / re-enter the token
 
 ```bash
@@ -124,16 +124,18 @@ buzzsprout logout
 
 Any command that needs a podcast id goes through the same resolver:
 
-1. **Explicit** — positional id, `--podcast ID`, `--in ID`, or `BUZZSPROUT_PODCAST_ID`
-2. **TTY** — interactive selector (`GET /api/podcasts`, ↑/↓, type to filter, Enter). A saved `default_podcast_id` is highlighted, not auto-used. A single podcast is selected without the UI.
-3. **Noninteractive** — `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or no TTY: use the saved default, or error with “pass `--podcast ID` or run `buzzsprout use`”
+1. **Explicit** — positional id, `--podcast ID`, `--in ID`, or `BUZZSPROUT_PODCAST_ID` (this invocation only)
+2. **Saved** — `default_podcast_id` in `~/.buzzsprout.json` is reused with no picker
+3. **TTY, none saved** — vertical list (`GET /api/podcasts`, ↑/↓, type to search, Enter). The choice is saved. A single podcast auto-selects and is saved. The list redraws in place (no stacked frames).
+4. **Noninteractive, none saved** — `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or no TTY: error with “pass `--podcast ID` or run `buzzsprout use`”
 
-Esc / Ctrl-C cancels the picker. Agents never block on it.
+Change the saved podcast with `buzzsprout use` (picker) or `buzzsprout use 10`. Esc / Ctrl-C cancels the picker. Agents never block on it.
 
 ```bash
 buzzsprout episodes list --podcast 10
 buzzsprout episodes list --in 10
-buzzsprout episodes list              # picker on a TTY
+buzzsprout episodes list              # saved podcast, or picker if none is set
+buzzsprout use                        # pick a different saved podcast
 ```
 
 ## Commands
@@ -152,7 +154,7 @@ buzzsprout podcasts update 10 --title "Life Empowerment"
 
 ```bash
 buzzsprout episodes list 10
-buzzsprout episodes list              # picker if you omit the id
+buzzsprout episodes list              # saved podcast, or picker if none is set
 buzzsprout episodes show 10 788881
 buzzsprout episodes create 10 --title "My episode" --private
 buzzsprout episodes publish 10 788881

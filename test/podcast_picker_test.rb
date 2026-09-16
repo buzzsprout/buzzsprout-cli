@@ -78,7 +78,28 @@ class PodcastPickerTest < Buzzsprout::Test
     io = StringIO.new
     chosen = Buzzsprout::PodcastPicker.new(PODCASTS, io: io, stdin: stdin).select!
     assert_equal 30, chosen['id']
-    assert_includes io.string, 'Filter: tech'
+    assert_includes io.string, 'Search: tech'
+  end
+
+  def test_select_redraws_in_place_without_stacking
+    stdin = StringIO.new("\e[B\e[B\r")
+    io = StringIO.new
+    chosen = Buzzsprout::PodcastPicker.new(PODCASTS, io: io, stdin: stdin).select!
+    assert_equal 30, chosen['id']
+    output = io.string
+    assert_includes output, "\e7"
+    assert_includes output, "\e8"
+    assert_includes output, "\e[0J"
+    assert_includes output, "\e[2K"
+    assert_includes output, 'Search:'
+    %w[Life\ Empowerment Youth\ Podcast Tech\ Talk].each do |title|
+      assert_includes output, title
+    end
+    save_at = output.index("\e7")
+    refute_nil save_at
+    after_save = output[save_at + 2..]
+    refute_match(/\e\[\d+A/, after_save, 'redraws must restore the saved origin, not CSI-A stack')
+    assert_operator output.scan("\e8").size, :>=, 2
   end
 
   def test_select_bang_esc_cancels
