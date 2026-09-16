@@ -54,8 +54,11 @@ class AnimationTest < Buzzsprout::Test
     io = StringIO.new
     Buzzsprout::Animation.new(io: io, delay: 0, force: true).play
     output = io.string
+    assert_includes output, "\e7"
+    assert_includes output, "\e8"
     assert_includes output, "\e[2K"
     assert_includes output, "\e[0J"
+    assert_operator output.rindex("\e8"), :>, output.rindex('⣿')
     assert_operator output.rindex("\e[0J"), :>, output.rindex('⣿')
   end
 
@@ -84,7 +87,10 @@ class AnimationTest < Buzzsprout::Test
     Buzzsprout::Animation.new(io: io, delay: 0, force: true).play_confetti
     output = io.string
     assert_match(/[*.+o~]/, output)
+    assert_includes output, "\e7"
+    assert_includes output, "\e8"
     assert_includes output, "\e[0J"
+    assert_operator output.rindex("\e[0J"), :>, output.index(/[*.+o~]/)
   end
 
   def test_icon_grows_before_wordmark

@@ -18,16 +18,7 @@ module Buzzsprout
 
       Color.theme(@io)
       hide_cursor
-      height = nil
-      delay = @delay || DELAY
-      frames.each_with_index do |frame, index|
-        lines = colorize(frame)
-        height ||= lines.size
-        home_cursor(height) if index.positive?
-        paint_lines(lines)
-        sleep delay
-      end
-      erase_block(height)
+      run_block(frames.map { |frame| colorize(frame) }, @delay || DELAY)
     ensure
       show_cursor
     end
@@ -37,15 +28,7 @@ module Buzzsprout
 
       Color.theme(@io)
       hide_cursor
-      height = nil
-      delay = @delay || CONFETTI_DELAY
-      confetti_frames.each_with_index do |lines, index|
-        height ||= lines.size
-        home_cursor(height) if index.positive?
-        paint_lines(lines)
-        sleep delay
-      end
-      erase_block(height)
+      run_block(confetti_frames, @delay || CONFETTI_DELAY)
     ensure
       show_cursor
     end
@@ -175,8 +158,25 @@ module Buzzsprout
       @io.print "\e[?25h" if @io.respond_to?(:print)
     end
 
-    # CSI n A preserves column on some terminals (Ghostty); CR + EL + ED
-    # wipe leftover braille/color so Welcome starts on a clean line.
+    def run_block(frames, delay)
+      height = frames.first&.size.to_i
+      return if height <= 0
+
+      # Scroll the prompt up if we are near the bottom, then remember this
+      # origin. Height-only CSI A is wrong when lines wrap; save/restore is not.
+      height.times { @io.print "\n" }
+      @io.print "\e[#{height}A\r\e7\e[s"
+
+      frames.each_with_index do |lines, index|
+        home_cursor(height) if index.positive?
+        paint_lines(lines)
+        sleep delay
+      end
+      restore_and_erase
+    end
+
+    # CSI n A preserves column on some terminals (Ghostty); CR + EL so a
+    # shorter/wrapped row cannot leave cells behind during in-place redraw.
     def home_cursor(height)
       return unless height&.positive?
 
@@ -185,15 +185,14 @@ module Buzzsprout
 
     def paint_lines(lines)
       lines.each do |line|
-        @io.print "\e[2K"
-        @io.puts line
+        @io.print "\e[2K#{line}\e[0m\n"
       end
     end
 
-    def erase_block(height)
-      return unless height&.positive?
-
-      @io.print "\e[#{height}A\r\e[0J"
+    def restore_and_erase
+      # DECRC + SCORC back to the pre-animation origin, reset SGR, erase
+      # downward so Welcome is not printed under leftover braille.
+      @io.print "\e8\e[u\e[0m\e[0J"
     end
   end
 end
