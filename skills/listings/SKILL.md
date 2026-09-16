@@ -5,11 +5,12 @@ description: Inspect Buzzsprout directory listing status and submit remaining on
 
 # Listings
 
-Directory listings for a podcast. There is no directory search. GET every directory, inspect `status`, then submit remaining one-click directories in one request.
+Directory listings for a podcast. The API has **no directory search** — `GET` every listing, then match client-side. Inspect `status`, or submit remaining one-click directories in one request.
 
 ## When to use
 
 - See Apple / Spotify / etc. listing state (`listed`, `submitted`, `unlisted`, `failed`).
+- Print one directory’s `url` or `status`.
 - Submit all remaining one-click directories (admin/owner only).
 
 Pandora is omitted. Unlisted directories that have never been submitted have `id: null`.
@@ -41,6 +42,11 @@ curl -sS -X POST "https://www.buzzsprout.com/api/PODCAST_ID/listings/submit_all"
 ## CLI
 
 ```bash
-buzzsprout listings list 10
-buzzsprout listings submit-all 10
+buzzsprout listings
+buzzsprout listings Apple url
+buzzsprout listings apple status
+buzzsprout listings Spotify
+buzzsprout listings submit-all
 ```
+
+Directory match is case-insensitive against `directory` and `name`. Exact `directory` wins, then exact `name`, then a unique prefix/substring. Zero matches or several matches are errors (no guessing). `url` / `status` as the last argument print that field only.

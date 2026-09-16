@@ -712,6 +712,113 @@ class CLITest < Buzzsprout::Test
     end
   end
 
+  def listings_payload
+    [
+      { id: 1, directory: 'Apple', name: 'Apple Podcasts', status: 'listed', url: 'https://podcasts.apple.com/show/1' },
+      { id: 2, directory: 'Spotify', name: 'Spotify', status: 'submitted', url: 'https://open.spotify.com/show/2' },
+      { id: 3, directory: 'Amazon', name: 'Amazon Music', status: 'unlisted', url: nil },
+      { id: 4, directory: 'Pocket Casts', name: 'Pocket Casts', status: 'failed', url: nil }
+    ]
+  end
+
+  def test_listings_lists_all_directories
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      api = FakeApi.new('/api/10/listings' => { status: 200, body: listings_payload })
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['listings'])
+        assert_equal 0, status, err
+        assert_match(/Apple  listed/, out)
+        assert_match(/Spotify  submitted/, out)
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_listings_directory_url_and_status_are_case_insensitive
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      api = FakeApi.new('/api/10/listings' => { status: 200, body: listings_payload })
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['listings', 'Apple', 'url'])
+        assert_equal 0, status, err
+        assert_equal "https://podcasts.apple.com/show/1\n", out
+
+        status, out, err = run_cli(['listings', 'Apple', 'URL'])
+        assert_equal 0, status, err
+        assert_equal "https://podcasts.apple.com/show/1\n", out
+
+        status, out, err = run_cli(['listings', 'apple', 'url'])
+        assert_equal 0, status, err
+        assert_equal "https://podcasts.apple.com/show/1\n", out
+
+        status, out, err = run_cli(['listings', 'Spotify', 'status'])
+        assert_equal 0, status, err
+        assert_equal "submitted\n", out
+
+        status, out, err = run_cli(['listings', 'Apple'])
+        assert_equal 0, status, err
+        assert_match(/Apple Podcasts  listed  https:\/\/podcasts\.apple\.com\/show\/1/, out)
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_listings_unique_prefix_and_ambiguous_or_missing
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      api = FakeApi.new('/api/10/listings' => { status: 200, body: listings_payload })
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['listings', 'spot', 'url'])
+        assert_equal 0, status, err
+        assert_equal "https://open.spotify.com/show/2\n", out
+
+        status, _, err = run_cli(['listings', 'cast'])
+        assert_equal 1, status
+        assert_match(/Multiple listings match "cast"/, err)
+        assert_match(/Apple/, err)
+        assert_match(/Pocket Casts/, err)
+
+        status, _, err = run_cli(['listings', 'Pandora', 'url'])
+        assert_equal 1, status
+        assert_match(/No listing matched "Pandora"/, err)
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_listings_submit_all_still_posts
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      api = FakeApi.new('/api/10/listings/submit_all' => { status: 202, body: { submitted: true } })
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['listings', 'submit-all'])
+        assert_equal 0, status, err
+        assert_match(/Submitted remaining one-click directories/, out)
+        req = api.requests.find { |row| row[:path] == '/api/10/listings/submit_all' }
+        refute_nil req
+        assert_equal 'POST', req[:method]
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_listings_help_mentions_directory_fields
+    status, out, err = run_cli(['listings', '--help'])
+    assert_equal 0, status, err
+    assert_match(/Apple url/, out)
+    assert_match(/submit-all/, out)
+    refute_match(/Error:/, err)
+  end
+
   def test_skills_path_and_list
     status, out, err = run_cli(['skills', 'path'])
     assert_equal 0, status, err

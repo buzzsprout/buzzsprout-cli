@@ -194,7 +194,10 @@ buzzsprout contributors list 10
 buzzsprout brand-affiliations list 10
 buzzsprout chapters list 10 788881
 buzzsprout transcripts show 10 788881
-buzzsprout listings list 10
+buzzsprout listings
+buzzsprout listings Apple url
+buzzsprout listings Apple status
+buzzsprout listings submit-all
 buzzsprout podrolls list 10
 buzzsprout feed-verifications list 10
 buzzsprout fan-mail list 10

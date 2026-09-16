@@ -57,7 +57,8 @@ module Buzzsprout
         brand-affiliations list|show|create|update|delete|assign|unassign …
         chapters list|replace <podcast_id> <episode_id>
         transcripts show|upload|delete|high-fidelity|replace-high-fidelity …
-        listings list|submit-all <podcast_id>
+        listings [directory] [url|status]
+        listings submit-all
         podrolls list|create|update|delete <podcast_id> [id]
         feed-verifications list|create|update|delete <podcast_id> [id]
         fan-mail list|show|publish|unpublish|read|block <podcast_id> [id]
