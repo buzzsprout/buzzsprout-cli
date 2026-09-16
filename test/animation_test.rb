@@ -63,35 +63,50 @@ class AnimationTest < Buzzsprout::Test
     assert_includes output, "\e[2K"
   end
 
-  def test_confetti_skipped_on_non_tty
+  def test_fireworks_skipped_on_non_tty
     io = StringIO.new
-    Buzzsprout::Animation.new(io: io, delay: 0).play_confetti
+    refute Buzzsprout::Animation.new(io: io, delay: 0).play_fireworks
     assert_equal '', io.string
   end
 
-  def test_confetti_skipped_in_ci
+  def test_fireworks_skipped_in_ci
+    ENV.delete('BUZZSPROUT_NO_ANIMATION')
     io = FakeTty.new
-    Buzzsprout::Animation.new(io: io, delay: 0).play_confetti
+    refute Buzzsprout::Animation.new(io: io, delay: 0).play_fireworks
     assert_equal '', io.string
   end
 
-  def test_confetti_skipped_when_no_animation_env
+  def test_fireworks_skipped_when_no_animation_env
     ENV.delete('CI')
     ENV['BUZZSPROUT_NO_ANIMATION'] = '1'
     io = FakeTty.new
-    Buzzsprout::Animation.new(io: io, delay: 0).play_confetti
+    refute Buzzsprout::Animation.new(io: io, delay: 0).play_fireworks
     assert_equal '', io.string
   end
 
-  def test_confetti_force_plays_then_clears
+  def test_fireworks_force_plays_and_leaves_phrase
     io = StringIO.new
-    Buzzsprout::Animation.new(io: io, delay: 0, force: true).play_confetti
+    assert Buzzsprout::Animation.new(io: io, delay: 0, force: true).play_fireworks
     output = io.string
-    assert_match(/[*.+o~]/, output)
-    assert_includes output, "\e7"
-    assert_includes output, "\e8"
-    assert_includes output, "\e[0J"
-    assert_operator output.rindex("\e[0J"), :>, output.index(/[*.+o~]/)
+    assert_includes output, "You're in!"
+    assert_match(/[|*+.]/, output)
+    refute_includes output, "\e7"
+    refute_includes output, "\e8"
+    refute_includes output, "\e[0J"
+    last_phrase = output.rindex("You're in!")
+    refute_nil last_phrase
+    after = output[last_phrase..]
+    refute_includes after, "\e[0J"
+  end
+
+  def test_fireworks_frames_keep_phrase_on_every_frame
+    io = StringIO.new
+    frames = Buzzsprout::Animation.new(io: io, delay: 0, force: true).fireworks_frames
+    assert_operator frames.size, :>=, 12
+    frames.each do |lines|
+      assert lines.any? { |line| line.include?("You're in!") }, 'phrase must ride with the bursts'
+    end
+    assert_equal "You're in!", frames.last[Buzzsprout::Animation::FIREWORKS_HEIGHT / 2].strip
   end
 
   def test_icon_grows_before_wordmark

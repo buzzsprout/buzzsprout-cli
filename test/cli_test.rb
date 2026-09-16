@@ -303,7 +303,7 @@ class CLITest < Buzzsprout::Test
         assert_match(/Life Empowerment/, out)
         assert_match(/Youth Podcast/, out)
         refute_match(/super-secret-token/, out)
-        refute_match(/\e\[0J/, out, 'confetti must skip with --no-animation')
+        refute_match(/\e\[0J/, out, 'fireworks must skip with --no-animation')
 
         request = api.requests.first
         assert_equal 'GET', request[:method]

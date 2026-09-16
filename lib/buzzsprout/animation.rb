@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'animation/wordmark'
-require_relative 'animation/confetti'
+require_relative 'animation/fireworks'
 
 module Buzzsprout
   class Animation
@@ -24,12 +24,14 @@ module Buzzsprout
       show_cursor
     end
 
-    def play_confetti
-      return if skip?
+    def play_fireworks
+      return false if skip?
 
       Color.theme(@io)
       hide_cursor
-      run_block(confetti_frames, @delay || CONFETTI_DELAY, erase: true)
+      # Leave the last frame (phrase + faded sparks) on screen, like the intro logo.
+      run_block(fireworks_frames, @delay || FIREWORKS_DELAY, erase: false)
+      true
     ensure
       show_cursor
     end
@@ -193,8 +195,7 @@ module Buzzsprout
 
     def restore_and_erase
       # DECRC + SCORC back to the pre-animation origin, reset SGR, erase
-      # downward. Used by confetti so debris does not linger; the intro
-      # wordmark is left in place so it stays visible through auth.
+      # downward. Intro logo and fireworks leave their finale in place.
       @io.print "\e8\e[u\e[0m\e[0J"
     end
   end
