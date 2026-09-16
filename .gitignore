@@ -20,3 +20,6 @@ pkg/
 # Bundler
 vendor/bundle
 .bundle/
+
+# Wordmark lives in lib/buzzsprout/animation/wordmark.rb — no logo binaries.
+/assets/

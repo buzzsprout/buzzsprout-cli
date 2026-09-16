@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = '>= 3.0.0'
 
-  spec.files         = Dir['lib/**/*', 'bin/*', 'skills/**/*', 'assets/**/*', 'README.md', 'LICENSE']
+  spec.files         = Dir['lib/**/*', 'bin/*', 'skills/**/*', 'README.md', 'LICENSE']
   spec.bindir        = 'bin'
   spec.executables   = ['buzzsprout']
 
