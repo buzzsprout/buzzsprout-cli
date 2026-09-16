@@ -16,7 +16,7 @@ Layout matches [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli) (`
 | [`brand_affiliations`](brand_affiliations/SKILL.md) | Sponsor / affiliate links |
 | [`chapters`](chapters/SKILL.md) | Replace an episode chapter list |
 | [`transcripts`](transcripts/SKILL.md) | Public and high-fidelity transcripts |
-| [`listings`](listings/SKILL.md) | Directory status and one-click submit |
+| [`listings`](listings/SKILL.md) | Directory status (`listings Apple url`) and one-click submit |
 | [`podrolls`](podrolls/SKILL.md) | Recommended podcasts in RSS |
 | [`feed_verifications`](feed_verifications/SKILL.md) | RSS feed verification values |
 | [`fan_mail`](fan_mail/SKILL.md) | Listener messages |
