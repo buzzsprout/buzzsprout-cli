@@ -32,6 +32,8 @@ module Buzzsprout
       assert_equal '99', Config.default_podcast_id
     end
   end
+
+  def test_require_token_without_config
     with_config do
       error = assert_raises(RuntimeError) { Config.require_token! }
       assert_match(/buzzsprout login/, error.message)
