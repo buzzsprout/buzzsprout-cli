@@ -15,7 +15,7 @@ require_relative 'commands/status'
 require_relative 'commands/podcasts'
 require_relative 'commands/episodes'
 require_relative 'commands/uploads'
-require_relative 'commands/stats'
+require_relative 'commands/downloads'
 require_relative 'commands/team'
 require_relative 'commands/contributors'
 require_relative 'commands/brand_affiliations'
@@ -46,12 +46,12 @@ module Buzzsprout
         episodes show <podcast_id> <episode_id>
         episodes create <podcast_id> --title "…" [--private]
         episodes update|publish|unpublish <podcast_id> <episode_id>
+        episode <id> downloads today|yesterday|YYYY-MM-DD
+        downloads today|yesterday|YYYY-MM-DD
         uploads start <podcast_id> <episode_id> --file PATH
         uploads complete|abort <podcast_id> <episode_id> <upload_id>
 
       More resources
-        stats [--date YYYY-MM-DD]
-        stats episode <episode_id> [--date YYYY-MM-DD]
         team list|invite|update|delete <podcast_id> [id]
         contributors list|show|create|update|delete|assign|unassign …
         brand-affiliations list|show|create|update|delete|assign|unassign …
@@ -87,6 +87,8 @@ module Buzzsprout
         NO_COLOR              Disable ANSI color
     HELP
 
+    DOWNLOAD_VERBS = %w[downloads stats].freeze
+
     ROUTES = {
       'login' => Commands::Login,
       'auth' => Commands::Login,
@@ -100,8 +102,8 @@ module Buzzsprout
       'episode' => Commands::Episodes,
       'uploads' => Commands::Uploads,
       'upload' => Commands::Uploads,
-      'stats' => Commands::Stats,
-      'downloads' => Commands::Stats,
+      'downloads' => Commands::Downloads,
+      'stats' => Commands::Downloads,
       'team' => Commands::Team,
       'contributors' => Commands::Contributors,
       'brand-affiliations' => Commands::BrandAffiliations,
@@ -146,6 +148,10 @@ module Buzzsprout
 
       options = Options.parse!(args)
       command = args.shift
+      if %w[episode episodes].include?(command) && args.any? { |arg| DOWNLOAD_VERBS.include?(arg) }
+        return run_episode_downloads(args, options)
+      end
+
       klass = ROUTES[command]
       unless klass
         @err.puts "Unknown command: #{command}"
@@ -168,6 +174,18 @@ module Buzzsprout
     end
 
     private
+
+    def run_episode_downloads(args, options)
+      unless args[0].to_s.match?(/\A\d+\z/) && DOWNLOAD_VERBS.include?(args[1].to_s)
+        return Commands::Downloads.new([], options, io: @io, err: @err, stdin: @stdin).run
+      end
+
+      episode_id = args.shift
+      args.shift
+      command = Commands::Downloads.new(args, options, io: @io, err: @err, stdin: @stdin)
+      command.episode_id = episode_id
+      command.run
+    end
 
     def first_run_or_help
       unless Config.configured?

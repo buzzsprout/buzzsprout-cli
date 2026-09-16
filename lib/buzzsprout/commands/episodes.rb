@@ -14,12 +14,14 @@ module Buzzsprout
           ['create', 'Create an episode (--title)'],
           ['update', 'Update episode fields'],
           ['publish', 'Publish an episode'],
-          ['unpublish', 'Unpublish (set private)']
+          ['unpublish', 'Unpublish (set private)'],
+          ['<id> downloads DATE', 'Episode downloads for today, yesterday, or YYYY-MM-DD']
         ],
         examples: [
           'buzzsprout episodes list',
           'buzzsprout episodes show 10 788881',
-          'buzzsprout episodes create --title "Pilot" --private'
+          'buzzsprout episodes create --title "Pilot" --private',
+          'buzzsprout episode 788881 downloads today'
         ]
       }.freeze
 

@@ -57,4 +57,5 @@ buzzsprout episodes create 10 --title "My episode" --private
 buzzsprout episodes update 10 788881 --body '{"description":"…"}'
 buzzsprout episodes publish 10 788881
 buzzsprout episodes unpublish 10 788881
+buzzsprout episode 788881 downloads today
 ```

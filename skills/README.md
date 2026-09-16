@@ -10,7 +10,7 @@ Layout matches [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli) (`
 | [`podcasts`](podcasts/SKILL.md) | List / show / update shows |
 | [`episodes`](episodes/SKILL.md) | Create, inspect, publish episodes |
 | [`uploads`](uploads/SKILL.md) | Attach audio or video (start → PUT → complete) |
-| [`stats`](stats/SKILL.md) | Download totals for one date |
+| [`stats`](stats/SKILL.md) | Download totals for one date (`buzzsprout downloads`) |
 | [`team`](team/SKILL.md) | People with Buzzsprout login access |
 | [`contributors`](contributors/SKILL.md) | On-show credits (Host, Guest, …) |
 | [`brand_affiliations`](brand_affiliations/SKILL.md) | Sponsor / affiliate links |

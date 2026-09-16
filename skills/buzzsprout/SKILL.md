@@ -74,7 +74,7 @@ Extensionless paths are canonical; `.json` is also accepted by the API.
 | Podcasts | `buzzsprout podcasts` | `podcasts` |
 | Episodes | `buzzsprout episodes` | `episodes` |
 | Uploads | `buzzsprout uploads` | `uploads` |
-| Stats | `buzzsprout stats` | `stats` |
+| Stats | `buzzsprout downloads` | `stats` |
 | Team | `buzzsprout team` | `team` |
 | Contributors | `buzzsprout contributors` | `contributors` |
 | Brand affiliations | `buzzsprout brand-affiliations` | `brand_affiliations` |

@@ -173,11 +173,22 @@ buzzsprout uploads start 10 788881 --file ./episode.m4a
 
 That runs start → PUT bytes (no API token on the storage URL) → complete.
 
+### Downloads
+
+Date is required (no default). `today` and `yesterday` are local calendar dates; `stats` is an alias.
+
+```bash
+buzzsprout downloads today
+buzzsprout downloads yesterday
+buzzsprout downloads 2026-09-01
+buzzsprout episode 788881 downloads today
+buzzsprout episode 788881 downloads yesterday
+buzzsprout episode 788881 downloads 2026-09-01
+```
+
 ### Everything else
 
 ```bash
-buzzsprout stats
-buzzsprout stats --date 2026-09-12
 buzzsprout team list 10
 buzzsprout contributors list 10
 buzzsprout brand-affiliations list 10
