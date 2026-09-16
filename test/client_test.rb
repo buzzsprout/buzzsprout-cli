@@ -66,11 +66,34 @@ class ClientTest < Buzzsprout::Test
   def test_dry_run_does_not_call_transport
     transport = Buzzsprout::StubTransport.new
     io = StringIO.new
-    client = Buzzsprout::Client.new(token: 'abc', transport: transport, dry_run: true, io: io)
+    client = Buzzsprout::Client.new(token: 'super-secret-token', transport: transport, dry_run: true, io: io)
     assert_nil client.get('/podcasts')
     assert_empty transport.requests
     assert_match(/dry-run/, io.string)
-    refute_match(/abc/, io.string)
+    assert_match(/Token token=\[REDACTED\]/, io.string)
+    refute_match(/super-secret-token/, io.string)
+  end
+
+  def test_strips_api_token_query_param
+    transport = Buzzsprout::StubTransport.new(
+      Buzzsprout.raw(status: 200, body: [])
+    )
+    client = Buzzsprout::Client.new(token: 'abc123', base_url: 'https://www.buzzsprout.com/api', transport: transport)
+    client.get('/podcasts', query: { date: '2026-09-01', api_token: 'should-not-appear' })
+    uri = transport.requests.first[:uri]
+    refute_match(/api_token/, uri.query.to_s)
+    assert_includes uri.query.to_s, 'date=2026-09-01'
+    assert_equal 'Token token=abc123', transport.requests.first[:headers]['Authorization']
+  end
+
+  def test_error_message_redacts_known_token
+    transport = Buzzsprout::StubTransport.new(
+      Buzzsprout.raw(status: 422, body: 'upstream echoed super-secret-token')
+    )
+    client = Buzzsprout::Client.new(token: 'super-secret-token', transport: transport)
+    error = assert_raises(Buzzsprout::Client::Error) { client.get('/podcasts') }
+    refute_match(/super-secret-token/, error.message)
+    assert_match(/\[REDACTED\]/, error.message)
   end
 
   def test_put_bytes_omits_authorization

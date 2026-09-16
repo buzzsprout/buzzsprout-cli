@@ -61,6 +61,8 @@ After install, tell the agent to load the `buzzsprout` skill first (auth + heade
 
 ## Conventions every skill assumes
 
+Prefer `buzzsprout …` over raw HTTP. **Never** read `~/.buzzsprout.json` for the token, **never** echo `BUZZSPROUT_API_TOKEN`, and **never** paste a real token into curl or chat. Header shape for documentation only (`YOUR_API_TOKEN` is a placeholder):
+
 ```text
 Authorization: Token token=YOUR_API_TOKEN
 User-Agent: BuzzsproutCLI/0.1.0
@@ -68,7 +70,7 @@ Accept: application/json
 ```
 
 - Base URL: `https://www.buzzsprout.com/api`
-- Token from **Profile → API**. Prefer `BUZZSPROUT_API_TOKEN` or `~/.buzzsprout.json` — never commit tokens.
+- Token from **Profile → API**, stored by `buzzsprout login` or the env var — never commit tokens.
 - Identifiable `User-Agent` on every request (generic library defaults may be blocked).
 - JSON writes: `Content-Type: application/json; charset=utf-8`
 - Rate limit: 60 requests / minute; retry `429` with backoff.

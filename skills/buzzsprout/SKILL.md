@@ -14,7 +14,17 @@ Agent-friendly Ruby CLI for the Buzzsprout API. Prefer the `buzzsprout` executab
 
 ## Auth
 
-Token auth (not OAuth). Token lives under **Profile → API** in Buzzsprout.
+Token auth (not OAuth). The user gets a token under **Profile → API** in Buzzsprout. **You (the agent) must not load that secret into context.**
+
+### Agent rules
+
+- Never read `~/.buzzsprout.json` (or `BUZZSPROUT_CONFIG`) to copy `api_token` into chat, logs, or curl.
+- Never print, echo, or interpolate `BUZZSPROUT_API_TOKEN`.
+- Authenticate with `buzzsprout login` (TTY prompt, no echo) or assume env/config is already set.
+- Prefer the `buzzsprout` CLI over constructing HTTP. If you must show a header shape, keep the placeholder `YOUR_API_TOKEN` — never a real token.
+- `buzzsprout status --json` reports `token_set: true` or `false`, not the secret. `--dry-run` prints `Token token=[REDACTED]`.
+
+The CLI sends `Authorization: Token token=…` on API calls (never `?api_token=`). Header shape for docs only:
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
@@ -22,28 +32,17 @@ User-Agent: BuzzsproutCLI/0.1.0
 Accept: application/json
 ```
 
-Resolution order: `--token` (login only) → `BUZZSPROUT_API_TOKEN` → `~/.buzzsprout.json`.
+Resolution order inside the CLI (not for agents to read): env `BUZZSPROUT_API_TOKEN`, then the file written by `login`. `--token` on argv is login-only and can leak via process list/history — do not recommend it.
 
 ```bash
 buzzsprout login                  # animation → prompt → GET /podcasts → picker if 2+ shows → save
-buzzsprout login --no-animation --token "$BUZZSPROUT_API_TOKEN"
+buzzsprout login --no-animation
 buzzsprout status
 buzzsprout podcast use            # picker to change the saved podcast (or pass an id / --podcast / --in)
 buzzsprout logout
 ```
 
-First run with no args and no saved token starts login automatically.
-
-Config file (`~/.buzzsprout.json`, mode `0600`):
-
-```json
-{
-  "api_token": "YOUR_API_TOKEN",
-  "default_podcast_id": 10
-}
-```
-
-Never print the full token. Never write it into the repo.
+First run with no args and no saved token starts login automatically. Config lives at `~/.buzzsprout.json` (mode `0600` on Unix). Do not open it for the token value.
 
 ## Base URL
 

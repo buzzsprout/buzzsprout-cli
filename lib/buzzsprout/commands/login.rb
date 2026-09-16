@@ -5,18 +5,18 @@ require 'io/console'
 module Buzzsprout
   module Commands
     class Login < Base
-      USAGE = 'buzzsprout login [--token TOKEN] [--no-animation]'
+      USAGE = 'buzzsprout login [--no-animation]'
       HELP_PAGE = {
         summary: 'Authenticate with a Buzzsprout API token.',
-        usage: 'buzzsprout login [--token TOKEN] [--no-animation]',
+        usage: 'buzzsprout login [--no-animation]',
         aliases: %w[login auth init],
         flags: [
-          ['--token TOKEN', 'Token (otherwise prompted)'],
+          ['--token TOKEN', 'Avoid: visible in process list and shell history. Prefer the prompt or BUZZSPROUT_API_TOKEN'],
           ['--no-animation', 'Skip the intro animation']
         ],
         examples: [
           'buzzsprout login',
-          'buzzsprout login --token "$BUZZSPROUT_API_TOKEN" --no-animation'
+          'buzzsprout login --no-animation'
         ]
       }.freeze
 
@@ -66,7 +66,7 @@ module Buzzsprout
         @io.puts Color.bold('Welcome to the Buzzsprout CLI', io: @io)
         @io.puts '=' * 40
         @io.puts 'Authenticate with the token from Profile → API.'
-        @io.puts Color.dim('Tip: you can also set BUZZSPROUT_API_TOKEN and skip typing it.', io: @io)
+        @io.puts Color.dim('Tip: set BUZZSPROUT_API_TOKEN in the environment instead of pasting on argv.', io: @io)
         @io.puts ''
       end
 

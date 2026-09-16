@@ -5,6 +5,7 @@ require 'net/http'
 require 'openssl'
 require 'uri'
 require_relative 'version'
+require_relative 'redact'
 
 module Buzzsprout
   class Client
@@ -166,8 +167,12 @@ module Buzzsprout
 
       unless query.nil? || query.empty?
         existing = URI.decode_www_form(uri.query || '')
-        query.each { |key, value| existing << [key.to_s, value.to_s] unless value.nil? }
-        uri.query = URI.encode_www_form(existing)
+        query.each do |key, value|
+          next if value.nil? || Redact::QUERY_KEYS.match?(key.to_s)
+
+          existing << [key.to_s, value.to_s]
+        end
+        uri.query = URI.encode_www_form(existing) unless existing.empty?
       end
       uri
     end
@@ -182,7 +187,7 @@ module Buzzsprout
 
     def raise_for_status(raw)
       parsed = parse_error(raw)
-      message = parsed[:message]
+      message = Redact.string(parsed[:message], known: @token)
       klass = case raw.status
               when 401 then Unauthorized
               when 429 then RateLimited
@@ -219,10 +224,13 @@ module Buzzsprout
     end
 
     def print_dry_run(method, uri, body, multipart)
-      @io.puts "[dry-run] #{method.to_s.upcase} #{uri}"
-      @io.puts '[dry-run] Authorization: Token token=[REDACTED]'
+      @io.puts Redact.string("[dry-run] #{method.to_s.upcase} #{Redact.uri(uri, known: @token)}", known: @token)
+      @io.puts "[dry-run] Authorization: Token token=#{Redact::PLACEHOLDER}"
       @io.puts "[dry-run] User-Agent: #{USER_AGENT}"
-      @io.puts "[dry-run] body: #{JSON.pretty_generate(body)}" if body
+      if body
+        payload = body.is_a?(String) ? body : JSON.pretty_generate(body)
+        @io.puts Redact.string("[dry-run] body: #{payload}", known: @token)
+      end
       @io.puts "[dry-run] multipart: #{multipart.keys.join(', ')}" if multipart
     end
 

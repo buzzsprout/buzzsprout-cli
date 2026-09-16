@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require_relative 'redact'
 require_relative 'podcast_picker'
 
 module Buzzsprout
@@ -51,8 +52,9 @@ module Buzzsprout
       end
     end
 
-      def json(data)
-      @io.puts JSON.pretty_generate(data.nil? ? { ok: true } : data)
+    def json(data)
+      payload = JSON.pretty_generate(data.nil? ? { ok: true } : data)
+      @io.puts Redact.string(payload)
     end
 
     def wrap_list(data)

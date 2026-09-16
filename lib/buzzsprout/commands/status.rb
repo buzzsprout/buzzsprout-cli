@@ -29,16 +29,10 @@ module Buzzsprout
 
       def run
         if Config.configured?
-          token = Config.token.to_s
-          masked = if token.length > 8
-                     "#{token[0, 4]}…#{token[-4, 4]}"
-                   else
-                     '[set]'
-                   end
           payload = {
             authenticated: true,
+            token_set: true,
             config_file: Config.config_file,
-            token: masked,
             default_podcast_id: Config.default_podcast_id,
             api_base: Config.api_base_url,
             user_agent: Client::USER_AGENT
@@ -46,12 +40,12 @@ module Buzzsprout
           output(payload) do
             @io.puts Color.green('Authenticated', io: @io)
             @formatter.kv('Config', Config.config_file)
-            @formatter.kv('Token', masked)
+            @formatter.kv('Token', 'set')
             @formatter.kv('Podcast', Config.default_podcast_id)
             @formatter.kv('API', Config.api_base_url)
           end
         else
-          payload = { authenticated: false, config_file: Config.config_file }
+          payload = { authenticated: false, token_set: false, config_file: Config.config_file }
           output(payload) do
             @io.puts 'Not authenticated. Run `buzzsprout login`.'
           end

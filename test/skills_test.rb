@@ -19,5 +19,10 @@ class SkillsContentTest < Buzzsprout::Test
       assert_match(/## CLI/, text)
       assert_match(/buzzsprout /, text)
     end
+
+    overview = File.read(File.join(root, 'buzzsprout', 'SKILL.md'))
+    assert_match(/Never read `~\/\.buzzsprout\.json`/, overview)
+    assert_match(/Never print, echo, or interpolate `BUZZSPROUT_API_TOKEN`/, overview)
+    refute_match(/login --token "\$BUZZSPROUT_API_TOKEN"/, overview)
   end
 end

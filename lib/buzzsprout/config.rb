@@ -40,7 +40,7 @@ module Buzzsprout
         dir = File.dirname(config_file)
         FileUtils.mkdir_p(dir)
         File.write(config_file, JSON.pretty_generate(merged))
-        File.chmod(0o600, config_file)
+        chmod_private!(config_file)
         @config = merged
       end
 
@@ -84,6 +84,14 @@ module Buzzsprout
       def delete!
         File.delete(config_file) if File.exist?(config_file)
         clear_cache
+      end
+
+      private
+
+      def chmod_private!(path)
+        File.chmod(0o600, path)
+      rescue NotImplementedError, SystemCallError
+        nil
       end
     end
   end

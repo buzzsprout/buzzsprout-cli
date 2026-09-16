@@ -3,6 +3,7 @@
 require 'json'
 require_relative 'version'
 require_relative 'config'
+require_relative 'redact'
 require_relative 'color'
 require_relative 'options'
 require_relative 'client'
@@ -72,7 +73,7 @@ module Buzzsprout
         --json                Print raw JSON
         --body '{…}'          JSON request body
         --file PATH           Upload a local file
-        --token TOKEN         Override the saved / env token for login
+        --token TOKEN         Login only; leaks via process list/history — prefer prompt or env
         --podcast ID, --in ID Podcast id for this invocation (skips the picker)
         --dry-run             Print the request without sending it
         --no-animation        Skip the first-run ASCII animation
@@ -80,7 +81,7 @@ module Buzzsprout
         --version, -v         Show version
 
       Environment
-        BUZZSPROUT_API_TOKEN  Token override (never commit this)
+        BUZZSPROUT_API_TOKEN  Token override (never print or commit this)
         BUZZSPROUT_PODCAST_ID Explicit podcast id (skips the picker)
         BUZZSPROUT_NONINTERACTIVE=1  Never open the podcast picker
         BUZZSPROUT_CONFIG     Config path (default ~/.buzzsprout.json)
@@ -165,14 +166,14 @@ module Buzzsprout
       status = klass.new(args, options, io: @io, err: @err, stdin: @stdin).run
       status.nil? ? 0 : status
     rescue PodcastPicker::Cancelled => e
-      @err.puts e.message
+      @err.puts Redact.string(e.message)
       1
     rescue Client::Unauthorized => e
-      @err.puts "Error: #{e.message}"
+      @err.puts "Error: #{Redact.string(e.message)}"
       @err.puts "Run 'buzzsprout login' to save a new token."
       1
     rescue StandardError => e
-      @err.puts "Error: #{e.message}"
+      @err.puts "Error: #{Redact.string(e.message)}"
       1
     end
 

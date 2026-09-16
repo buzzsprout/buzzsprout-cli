@@ -712,6 +712,46 @@ class CLITest < Buzzsprout::Test
     end
   end
 
+  def test_status_json_reports_token_set_not_the_secret
+    with_config do
+      Buzzsprout::Config.save(api_token: 'super-secret-token', default_podcast_id: 10)
+      status, out, err = run_cli(['status', '--json'])
+      assert_equal 0, status, err
+      payload = JSON.parse(out)
+      assert_equal true, payload['authenticated']
+      assert_equal true, payload['token_set']
+      refute payload.key?('token')
+      refute_match(/super-secret-token/, out)
+    end
+  end
+
+  def test_status_human_output_omits_raw_token
+    with_config do
+      Buzzsprout::Config.save(api_token: 'super-secret-token', default_podcast_id: 10)
+      status, out, err = run_cli(['status'])
+      assert_equal 0, status, err
+      assert_match(/Authenticated/, out)
+      assert_match(/Token\s+set/, out)
+      refute_match(/super-secret-token/, out)
+    end
+  end
+
+  def test_cli_error_redacts_token_from_api_body
+    with_config do
+      Buzzsprout::Config.save(api_token: 'super-secret-token', default_podcast_id: 10)
+      api = FakeApi.new('/api/10/episodes' => { status: 422, body: 'echo super-secret-token' })
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, _, err = run_cli(['episodes', 'list'])
+        assert_equal 1, status
+        refute_match(/super-secret-token/, err)
+        assert_match(/\[REDACTED\]/, err)
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
   def listings_payload
     [
       { id: 1, directory: 'Apple', name: 'Apple Podcasts', status: 'listed', url: 'https://podcasts.apple.com/show/1' },

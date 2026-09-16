@@ -93,28 +93,27 @@ With no config yet, `buzzsprout` (or `buzzsprout login`) will:
 ```bash
 buzzsprout login
 buzzsprout login --no-animation
-buzzsprout login --token "$BUZZSPROUT_API_TOKEN" --no-animation
 ```
 
-Skip the animation with `--no-animation` or `BUZZSPROUT_NO_ANIMATION=1`.
+Skip the animation with `--no-animation` or `BUZZSPROUT_NO_ANIMATION=1`. Prefer `BUZZSPROUT_API_TOKEN` in the environment over `--token` (process list / history).
 
 ## Authentication
 
+The CLI sends the token only as `Authorization: Token token=…` (never as `?api_token=`). It never prints the raw token (including `--json`, `--dry-run`, `status` / `whoami`, and error text). Dry-run shows `Token token=[REDACTED]`.
+
+**Agents:** do not read `~/.buzzsprout.json` for the token value. Do not print or echo `BUZZSPROUT_API_TOKEN`. Authenticate with `buzzsprout login` or assume the env/config is already set, then use `buzzsprout` instead of constructing curl with a real token in chat.
+
 | Source | Notes |
 | --- | --- |
-| `BUZZSPROUT_API_TOKEN` | Highest priority after a successful `login --token` save; never commit this |
-| `~/.buzzsprout.json` | Written by `buzzsprout login` |
-| `--token` | Login only, for non-interactive setup |
+| Interactive `buzzsprout login` | TTY prompt uses `noecho`; preferred |
+| `BUZZSPROUT_API_TOKEN` | Env override; never print or commit this |
+| `~/.buzzsprout.json` | Written by `buzzsprout login` (mode `0600` on Unix; Windows keeps the creating user's default ACL) |
+| `--token` | Login only; can leak via process list and shell history — avoid |
 
-```json
-{
-  "api_token": "YOUR_API_TOKEN",
-  "default_podcast_id": 10
-}
-```
+The config file stores `api_token` and `default_podcast_id`. Do not open it to copy the secret into a transcript.
 
 ```bash
-buzzsprout status
+buzzsprout status                 # token_set: true — never the secret
 buzzsprout podcast use            # interactive picker, then save as default
 buzzsprout podcast use 10         # or pass the id / --podcast / --in
 buzzsprout logout
@@ -223,7 +222,7 @@ Copy or symlink into whatever directory your agent already loads (`~/.cursor/ski
 
 | Variable | Purpose |
 | --- | --- |
-| `BUZZSPROUT_API_TOKEN` | Token override |
+| `BUZZSPROUT_API_TOKEN` | Token override (never print) |
 | `BUZZSPROUT_PODCAST_ID` | Explicit podcast id for this process (skips the picker) |
 | `BUZZSPROUT_NONINTERACTIVE=1` | Never open the podcast picker |
 | `BUZZSPROUT_CONFIG` | Config path (default `~/.buzzsprout.json`) |
