@@ -103,7 +103,8 @@ module Buzzsprout
       end
 
       def celebrate(podcasts)
-        @io.puts Color.green('authentication successful!', io: @io)
+        @io.puts ''
+        @io.puts Color.rgb('Authentication Successful', Animation::BOLT_COLOR, io: @io)
         list = PodcastPicker.wrap_list(podcasts)
         @io.puts ''
         @io.puts Color.dim("Token saved to #{Config.config_file} (mode 0600).", io: @io)

@@ -299,11 +299,12 @@ class CLITest < Buzzsprout::Test
       begin
         status, out, err = run_cli(['login', '--no-animation'], stdin_data: "super-secret-token\n")
         assert_equal 0, status, err
-        assert_match(/authentication successful!/, out)
+        assert_match(/\n\nAuthentication Successful\n/, out)
         assert_match(/Life Empowerment/, out)
         assert_match(/Youth Podcast/, out)
         refute_match(/super-secret-token/, out)
         refute_match(/You're in/, out)
+        refute_match(/authentication successful!/i, out)
 
         request = api.requests.first
         assert_equal 'GET', request[:method]
@@ -331,12 +332,34 @@ class CLITest < Buzzsprout::Test
       begin
         status, out, err = run_cli(['login', '--token', 'ok'])
         assert_equal 0, status, err
-        assert_match(/authentication successful!/, out)
+        assert_match(/\n\nAuthentication Successful\n/, out)
         refute_match(/You're in/, out)
         refute_match(/\e\[0J/, out)
       ensure
         api.shutdown
       end
+    end
+  end
+
+  def test_login_success_message_uses_logo_green
+    ENV.delete('NO_COLOR')
+    ENV.delete('BUZZSPROUT_NO_COLOR')
+    with_config do
+      io = Buzzsprout::FakeTty.new
+      err = StringIO.new
+      command = Buzzsprout::Commands::Login.new(
+        [],
+        Buzzsprout::Options.new,
+        io: io,
+        err: err,
+        stdin: StringIO.new
+      )
+      command.send(:celebrate, [{ 'id' => 10, 'title' => 'Life Empowerment' }])
+      out = io.string
+      assert_match(/\A\n/, out)
+      assert_includes out, 'Authentication Successful'
+      assert_includes out, '38;2;97;215;82'
+      refute_includes out, "\e[32m"
     end
   end
 
@@ -348,7 +371,7 @@ class CLITest < Buzzsprout::Test
         status, out, err = run_cli(['login', '--no-animation', '--token', 'bad'], stdin_data: '')
         assert_equal 1, status
         assert_match(/401/, err)
-        refute_match(/authentication successful!/, out)
+        refute_match(/Authentication Successful/, out)
         refute_match(/You're in/, out)
         refute_path_exists path
       ensure
@@ -657,7 +680,7 @@ class CLITest < Buzzsprout::Test
       begin
         status, out, err = run_cli(['login', '--no-animation'], tty: true, stdin_data: "super-secret-token\n\e[B\r")
         assert_equal 0, status, err
-        assert_match(/authentication successful!/, out)
+        assert_match(/\n\nAuthentication Successful\n/, out)
         assert_match(/Select a podcast/, out)
         assert_match(/Default podcast set to 20/, out)
         saved = JSON.parse(File.read(path), symbolize_names: true)
