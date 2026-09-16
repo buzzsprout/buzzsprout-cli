@@ -299,11 +299,11 @@ class CLITest < Buzzsprout::Test
       begin
         status, out, err = run_cli(['login', '--no-animation'], stdin_data: "super-secret-token\n")
         assert_equal 0, status, err
-        assert_match(/You're in/, out)
+        assert_match(/authentication successful!/, out)
         assert_match(/Life Empowerment/, out)
         assert_match(/Youth Podcast/, out)
         refute_match(/super-secret-token/, out)
-        refute_match(/\e\[0J/, out, 'fireworks must skip with --no-animation')
+        refute_match(/You're in/, out)
 
         request = api.requests.first
         assert_equal 'GET', request[:method]
@@ -320,6 +320,26 @@ class CLITest < Buzzsprout::Test
     end
   end
 
+  def test_login_success_message_without_no_animation_flag
+    ENV.delete('BUZZSPROUT_NO_ANIMATION')
+    ENV.delete('CI')
+    with_config do
+      api = FakeApi.new(
+        '/api/podcasts' => { status: 200, body: [{ id: 10, title: 'Life Empowerment' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['login', '--token', 'ok'])
+        assert_equal 0, status, err
+        assert_match(/authentication successful!/, out)
+        refute_match(/You're in/, out)
+        refute_match(/\e\[0J/, out)
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
   def test_login_failure_without_tty_does_not_save
     with_config do |path|
       api = FakeApi.new('/api/podcasts' => { status: 401, body: 'Invalid token' })
@@ -328,6 +348,7 @@ class CLITest < Buzzsprout::Test
         status, out, err = run_cli(['login', '--no-animation', '--token', 'bad'], stdin_data: '')
         assert_equal 1, status
         assert_match(/401/, err)
+        refute_match(/authentication successful!/, out)
         refute_match(/You're in/, out)
         refute_path_exists path
       ensure
@@ -636,7 +657,7 @@ class CLITest < Buzzsprout::Test
       begin
         status, out, err = run_cli(['login', '--no-animation'], tty: true, stdin_data: "super-secret-token\n\e[B\r")
         assert_equal 0, status, err
-        assert_match(/You're in/, out)
+        assert_match(/authentication successful!/, out)
         assert_match(/Select a podcast/, out)
         assert_match(/Default podcast set to 20/, out)
         saved = JSON.parse(File.read(path), symbolize_names: true)

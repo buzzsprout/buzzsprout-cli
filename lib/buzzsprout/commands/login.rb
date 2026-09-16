@@ -62,12 +62,6 @@ module Buzzsprout
         Animation.new(io: @io).play
       end
 
-      def play_fireworks
-        return false if @options.no_animation?
-
-        Animation.new(io: @io).play_fireworks
-      end
-
       def say_hello
         @io.puts Color.bold('Welcome to the Buzzsprout CLI', io: @io)
         @io.puts '=' * 40
@@ -109,9 +103,7 @@ module Buzzsprout
       end
 
       def celebrate(podcasts)
-        unless play_fireworks
-          @io.puts Color.green("You're in!", io: @io)
-        end
+        @io.puts Color.green('authentication successful!', io: @io)
         list = PodcastPicker.wrap_list(podcasts)
         @io.puts ''
         @io.puts Color.dim("Token saved to #{Config.config_file} (mode 0600).", io: @io)

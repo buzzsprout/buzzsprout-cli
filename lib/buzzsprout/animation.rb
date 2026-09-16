@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative 'animation/wordmark'
-require_relative 'animation/fireworks'
 
 module Buzzsprout
   class Animation
@@ -19,19 +18,7 @@ module Buzzsprout
       Color.theme(@io)
       hide_cursor
       # Leave the finale wordmark on screen; auth continues below it.
-      run_block(frames.map { |frame| colorize(frame) }, @delay || DELAY, erase: false)
-    ensure
-      show_cursor
-    end
-
-    def play_fireworks
-      return false if skip?
-
-      Color.theme(@io)
-      hide_cursor
-      # Leave the last frame (phrase + faded sparks) on screen, like the intro logo.
-      run_block(fireworks_frames, @delay || FIREWORKS_DELAY, erase: false)
-      true
+      run_block(frames.map { |frame| colorize(frame) }, @delay || DELAY)
     ensure
       show_cursor
     end
@@ -161,22 +148,20 @@ module Buzzsprout
       @io.print "\e[?25h" if @io.respond_to?(:print)
     end
 
-    def run_block(frames, delay, erase: false)
+    def run_block(frames, delay)
       height = frames.first&.size.to_i
       return if height <= 0
 
-      # Scroll the prompt up if we are near the bottom, then remember this
-      # origin. Height-only CSI A is wrong when lines wrap; save/restore is not.
+      # Scroll the prompt up if we are near the bottom. Height-only CSI A is
+      # wrong when lines wrap; leave the finale wordmark in place.
       height.times { @io.print "\n" }
       @io.print "\e[#{height}A\r"
-      @io.print "\e7\e[s" if erase
 
       frames.each_with_index do |lines, index|
         home_cursor(height) if index.positive?
         paint_lines(lines)
         sleep delay
       end
-      restore_and_erase if erase
     end
 
     # CSI n A preserves column on some terminals (Ghostty); CR + EL so a
@@ -191,12 +176,6 @@ module Buzzsprout
       lines.each do |line|
         @io.print "\e[2K#{line}\e[0m\n"
       end
-    end
-
-    def restore_and_erase
-      # DECRC + SCORC back to the pre-animation origin, reset SGR, erase
-      # downward. Intro logo and fireworks leave their finale in place.
-      @io.print "\e8\e[u\e[0m\e[0J"
     end
   end
 end
