@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'socket'
+require 'date'
 require_relative 'test_helper'
 
 class FakeApi
@@ -40,7 +41,7 @@ class FakeApi
     return unless request_line
 
     method, raw_path, = request_line.split
-    path = raw_path.to_s.split('?', 2).first
+    path, query = raw_path.to_s.split('?', 2)
     headers = {}
     loop do
       line = socket.gets
@@ -55,6 +56,7 @@ class FakeApi
     @requests << {
       method: method,
       path: path,
+      query: query,
       authorization: headers['authorization'],
       user_agent: headers['user-agent'],
       accept: headers['accept'],
@@ -95,26 +97,79 @@ class CLITest < Buzzsprout::Test
     assert_match(/Usage/, out)
   end
 
-  def test_stats_without_args_prints_group_help
-    status, out, err = run_cli(['stats'])
-    assert_equal 0, status, err
-    assert_match(/USAGE/, out)
-    assert_match(/COMMANDS/, out)
-    assert_match(/ALIASES/, out)
-    assert_match(/INHERITED FLAGS/, out)
-    assert_match(/EXAMPLES/, out)
-    assert_match(/LEARN MORE/, out)
-    assert_match(/episode/, out)
-    assert_match(/--date YYYY-MM-DD/, out)
-    refute_match(/Error:/, err)
-    refute_match(/date is required/, err)
-  end
-
   def test_stats_help_flag_prints_group_help
     status, out, err = run_cli(['stats', '--help'])
     assert_equal 0, status, err
     assert_match(/USAGE/, out)
+    assert_match(/default: today/, out)
+    refute_match(/required/, out)
     refute_match(/Error:/, err)
+  end
+
+  def test_stats_defaults_date_to_today
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      today = Date.today.strftime('%Y-%m-%d')
+      api = FakeApi.new(
+        '/api/10/downloads' => { status: 200, body: [{ episode_id: 7, total: 2 }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['stats'])
+        assert_equal 0, status, err
+        assert_match(/Downloads for #{today}/, out)
+        req = api.requests.find { |row| row[:path] == '/api/10/downloads' }
+        refute_nil req
+        assert_includes req[:query].to_s, "date=#{today}"
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_stats_explicit_date_and_downloads_alias
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      api = FakeApi.new(
+        '/api/10/downloads' => { status: 200, body: [{ episode_id: 7, total: 4 }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['downloads', '--date', '2026-09-01'])
+        assert_equal 0, status, err
+        assert_match(/Downloads for 2026-09-01/, out)
+        req = api.requests.find { |row| row[:path] == '/api/10/downloads' }
+        refute_nil req
+        assert_includes req[:query].to_s, 'date=2026-09-01'
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_stats_episode_defaults_date_to_today
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      today = Date.today.strftime('%Y-%m-%d')
+      api = FakeApi.new(
+        '/api/10/788881/downloads' => {
+          status: 200,
+          body: { episodes: [{ downloads: [{ app: 'Apple Podcasts', country_code: 'US' }] }] }
+        }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['stats', 'episode', '788881'])
+        assert_equal 0, status, err
+        assert_match(/Episode 788881 downloads for #{today}/, out)
+        assert_match(/Apple Podcasts/, out)
+        req = api.requests.find { |row| row[:path] == '/api/10/788881/downloads' }
+        refute_nil req
+        assert_includes req[:query].to_s, "date=#{today}"
+      ensure
+        api.shutdown
+      end
+    end
   end
 
   def test_uploads_without_args_prints_group_help

@@ -17,7 +17,7 @@ Download activity for **one** podcast-local calendar date (`YYYY-MM-DD`). No dat
 - `GET /api/:podcast_id/downloads?date=YYYY-MM-DD`
 - `GET /api/:podcast_id/:episode_id/downloads?date=YYYY-MM-DD` — note: **not** under `/episodes`
 
-`page` defaults to 1, `per_page` defaults to 100 (max 1000). Invalid/missing `date` → `422` with `param: "date"`.
+`page` defaults to 1, `per_page` defaults to 100 (max 1000). Invalid `date` → `422` with `param: "date"`. The CLI sends **today** (local calendar date) when `--date` is omitted.
 
 ## Auth headers
 
@@ -43,6 +43,7 @@ Episode response includes `episodes[].downloads[]` (`app`, `device`, `device_typ
 ## CLI
 
 ```bash
-buzzsprout stats 10 --date 2026-09-12
-buzzsprout stats episode 10 788881 --date 2026-09-12 --page 1 --per-page 100
+buzzsprout stats
+buzzsprout stats --date 2026-09-12
+buzzsprout stats episode 788881 --date 2026-09-12 --page 1 --per-page 100
 ```

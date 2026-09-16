@@ -176,7 +176,8 @@ That runs start → PUT bytes (no API token on the storage URL) → complete.
 ### Everything else
 
 ```bash
-buzzsprout stats 10 --date 2026-09-12
+buzzsprout stats
+buzzsprout stats --date 2026-09-12
 buzzsprout team list 10
 buzzsprout contributors list 10
 buzzsprout brand-affiliations list 10
