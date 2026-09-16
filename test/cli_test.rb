@@ -80,6 +80,8 @@ class CLITest < Buzzsprout::Test
       status, out, = run_cli(['--help'])
     assert_equal 0, status
     assert_match(/login, auth, init/, out)
+    assert_match(/podcast use/, out)
+    refute_match(/^        use \[/, out)
 
     status, out, = run_cli(['version'])
     assert_equal 0, status
@@ -91,6 +93,12 @@ class CLITest < Buzzsprout::Test
     assert_equal 1, status
     assert_match(/Unknown command/, err)
     assert_match(/Usage/, out)
+  end
+
+  def test_top_level_use_is_unknown
+    status, _, err = run_cli(['use', '10'])
+    assert_equal 1, status
+    assert_match(/Unknown command: use/, err)
   end
 
   def test_login_success_persists_token_and_celebrates
@@ -333,7 +341,7 @@ class CLITest < Buzzsprout::Test
       status, _, err = run_cli(['episodes', 'list'])
       assert_equal 1, status
       assert_match(/Pass --podcast ID/, err)
-      assert_match(/buzzsprout use/, err)
+      assert_match(/buzzsprout podcast use/, err)
     end
   end
 
@@ -381,7 +389,7 @@ class CLITest < Buzzsprout::Test
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
-        status, out, err = run_cli(['use'], tty: true, stdin_data: "\e[B\r")
+        status, out, err = run_cli(['podcast', 'use'], tty: true, stdin_data: "\e[B\r")
         assert_equal 0, status, err
         assert_match(/Select a podcast/, out)
         assert_match(/Default podcast set to 20/, out)
@@ -396,7 +404,7 @@ class CLITest < Buzzsprout::Test
   def test_use_with_id_skips_picker
     with_config do |path|
       Buzzsprout::Config.save(api_token: 'ok')
-      status, out, err = run_cli(['use', '10'], tty: true, stdin_data: "\r")
+      status, out, err = run_cli(['podcast', 'use', '10'], tty: true, stdin_data: "\r")
       assert_equal 0, status, err
       assert_match(/Default podcast set to 10/, out)
       refute_match(/Select a podcast/, out)

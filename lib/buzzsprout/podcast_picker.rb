@@ -9,7 +9,7 @@ module Buzzsprout
   class PodcastPicker
     class Cancelled < StandardError; end
 
-    MISSING_ID = 'Podcast id required. Pass --podcast ID (or --in ID), or run `buzzsprout use`.'
+    MISSING_ID = 'Podcast id required. Pass --podcast ID (or --in ID), or run `buzzsprout podcast use`.'
     WINDOW = 12
     # Title, search line, hints. Reserve this plus WINDOW so redraws never scroll.
     CHROME = 3

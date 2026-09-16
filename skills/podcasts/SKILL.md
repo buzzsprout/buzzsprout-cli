@@ -53,5 +53,5 @@ Writable fields: `title`, `description`, `keywords`, `author`, `explicit`, `lang
 buzzsprout podcasts
 buzzsprout podcasts show 10
 buzzsprout podcasts update 10 --title "Life Empowerment"
-buzzsprout use 10
+buzzsprout podcast use 10
 ```

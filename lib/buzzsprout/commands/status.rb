@@ -47,15 +47,5 @@ module Buzzsprout
         0
       end
     end
-
-    class Use < Base
-      USAGE = 'buzzsprout use [podcast_id|--podcast ID|--in ID]'
-
-      def run
-        id = resolve_podcast_id!(persist: true)
-        @io.puts "Default podcast set to #{id}."
-        0
-      end
-    end
   end
 end

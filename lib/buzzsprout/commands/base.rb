@@ -49,7 +49,7 @@ module Buzzsprout
       end
 
       # 1. Explicit positional / --podcast / --in / BUZZSPROUT_PODCAST_ID
-      # 2. Saved default (skip picker) unless persist:true (`buzzsprout use`)
+      # 2. Saved default (skip picker) unless persist:true (`buzzsprout podcast use`)
       # 3. Interactive picker on a TTY, then save as default
       # 4. Noninteractive: saved default, else a clear error (never blocks)
       def resolve_podcast_id!(persist: false)

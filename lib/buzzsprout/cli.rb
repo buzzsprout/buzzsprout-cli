@@ -36,10 +36,10 @@ module Buzzsprout
         login, auth, init     Logo animation, prompt for API token, test GET /podcasts
         logout                Remove ~/.buzzsprout.json
         status, whoami        Show whether a token is saved
-        use [podcast_id]      Set the saved podcast (picker if omitted)
 
       Podcasts & episodes
         podcasts [list]
+        podcast use [id]      Set the saved podcast (picker if omitted)
         podcasts show <id>
         podcasts update <id> --title "…"
         episodes list [podcast_id]
@@ -94,7 +94,6 @@ module Buzzsprout
       'logout' => Commands::Logout,
       'status' => Commands::Status,
       'whoami' => Commands::Status,
-      'use' => Commands::Use,
       'podcasts' => Commands::Podcasts,
       'podcast' => Commands::Podcasts,
       'episodes' => Commands::Episodes,

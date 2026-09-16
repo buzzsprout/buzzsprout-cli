@@ -115,8 +115,8 @@ Skip the animation with `--no-animation` or `BUZZSPROUT_NO_ANIMATION=1`.
 
 ```bash
 buzzsprout status
-buzzsprout use            # interactive picker, then save as default
-buzzsprout use 10         # or pass the id / --podcast / --in
+buzzsprout podcast use            # interactive picker, then save as default
+buzzsprout podcast use 10         # or pass the id / --podcast / --in
 buzzsprout logout
 ```
 
@@ -127,15 +127,15 @@ Any command that needs a podcast id goes through the same resolver:
 1. **Explicit** — positional id, `--podcast ID`, `--in ID`, or `BUZZSPROUT_PODCAST_ID` (this invocation only)
 2. **Saved** — `default_podcast_id` in `~/.buzzsprout.json` is reused with no picker
 3. **TTY, none saved** — vertical list (`GET /api/podcasts`, ↑/↓, type to search, Enter). The choice is saved. A single podcast auto-selects and is saved. The list redraws in place (no stacked frames).
-4. **Noninteractive, none saved** — `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or no TTY: error with “pass `--podcast ID` or run `buzzsprout use`”
+4. **Noninteractive, none saved** — `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or no TTY: error with “pass `--podcast ID` or run `buzzsprout podcast use`”
 
-Change the saved podcast with `buzzsprout use` (picker) or `buzzsprout use 10`. Esc / Ctrl-C cancels the picker. Agents never block on it.
+Change the saved podcast with `buzzsprout podcast use` (picker) or `buzzsprout podcast use 10`. Esc / Ctrl-C cancels the picker. Agents never block on it.
 
 ```bash
 buzzsprout episodes list --podcast 10
 buzzsprout episodes list --in 10
 buzzsprout episodes list              # saved podcast, or picker if none is set
-buzzsprout use                        # pick a different saved podcast
+buzzsprout podcast use                # pick a different saved podcast
 ```
 
 ## Commands
@@ -146,6 +146,8 @@ Global flags: `--json`, `--body '{…}'`, `--file PATH`, `--dry-run`, `--podcast
 
 ```bash
 buzzsprout podcasts
+buzzsprout podcast use
+buzzsprout podcast use 10
 buzzsprout podcasts show 10
 buzzsprout podcasts update 10 --title "Life Empowerment"
 ```

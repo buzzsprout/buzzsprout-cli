@@ -3,7 +3,7 @@
 module Buzzsprout
   module Commands
     class Podcasts < Base
-      USAGE = 'buzzsprout podcasts [list|show <id>|update <id>]'
+      USAGE = 'buzzsprout podcasts [list|show <id>|update <id>|use [id]]'
 
       def run
         verb, *rest = @args
@@ -16,6 +16,9 @@ module Buzzsprout
         when 'update'
           @args.replace(rest)
           update
+        when 'use'
+          @args.replace(rest)
+          use_default
         when /\A\d+\z/
           @args.unshift(verb)
           show
@@ -52,6 +55,12 @@ module Buzzsprout
 
         podcast = client.patch("/podcasts/#{id}", body: body)
         output(podcast) { @io.puts "Updated podcast #{id}: #{podcast && podcast['title']}" }
+        0
+      end
+
+      def use_default
+        id = resolve_podcast_id!(persist: true)
+        @io.puts "Default podcast set to #{id}."
         0
       end
     end

@@ -124,7 +124,7 @@ module Buzzsprout
 
         unless interactive_podcast_picker?
           print_podcast_list(list)
-          @io.puts 'Set a default with:  buzzsprout use'
+          @io.puts 'Set a default with:  buzzsprout podcast use'
           print_next_steps
           return
         end
@@ -140,7 +140,7 @@ module Buzzsprout
           Config.save(default_podcast_id: chosen['id'])
           @io.puts "Default podcast set to #{chosen['id']}  #{chosen['title']}."
         rescue PodcastPicker::Cancelled
-          @io.puts 'No default podcast set. Run `buzzsprout use` when you are ready.'
+          @io.puts 'No default podcast set. Run `buzzsprout podcast use` when you are ready.'
         end
         print_next_steps
       end
