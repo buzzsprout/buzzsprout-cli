@@ -50,6 +50,43 @@ class AnimationTest < Buzzsprout::Test
     assert_includes io.string, '⣿'
   end
 
+  def test_play_erases_animation_block_so_welcome_is_clean
+    io = StringIO.new
+    Buzzsprout::Animation.new(io: io, delay: 0, force: true).play
+    output = io.string
+    assert_includes output, "\e[2K"
+    assert_includes output, "\e[0J"
+    assert_operator output.rindex("\e[0J"), :>, output.rindex('⣿')
+  end
+
+  def test_confetti_skipped_on_non_tty
+    io = StringIO.new
+    Buzzsprout::Animation.new(io: io, delay: 0).play_confetti
+    assert_equal '', io.string
+  end
+
+  def test_confetti_skipped_in_ci
+    io = FakeTty.new
+    Buzzsprout::Animation.new(io: io, delay: 0).play_confetti
+    assert_equal '', io.string
+  end
+
+  def test_confetti_skipped_when_no_animation_env
+    ENV.delete('CI')
+    ENV['BUZZSPROUT_NO_ANIMATION'] = '1'
+    io = FakeTty.new
+    Buzzsprout::Animation.new(io: io, delay: 0).play_confetti
+    assert_equal '', io.string
+  end
+
+  def test_confetti_force_plays_then_clears
+    io = StringIO.new
+    Buzzsprout::Animation.new(io: io, delay: 0, force: true).play_confetti
+    output = io.string
+    assert_match(/[*.+o~]/, output)
+    assert_includes output, "\e[0J"
+  end
+
   def test_icon_grows_before_wordmark
     frames = Buzzsprout::Animation.frames
     early = frames[2]['text'].join

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'animation/wordmark'
+require_relative 'animation/confetti'
 
 module Buzzsprout
   class Animation
@@ -16,22 +17,37 @@ module Buzzsprout
       return if skip?
 
       Color.theme(@io)
-
-      hide = "\e[?25l"
-      show = "\e[?25h"
-      @io.print hide
+      hide_cursor
       height = nil
       delay = @delay || DELAY
       frames.each_with_index do |frame, index|
         lines = colorize(frame)
         height ||= lines.size
-        @io.print "\e[#{height}A" if index.positive?
-        lines.each { |line| @io.puts line }
+        home_cursor(height) if index.positive?
+        paint_lines(lines)
         sleep delay
       end
+      erase_block(height)
     ensure
-      @io.print show if @io.respond_to?(:print)
-      @io.puts '' if @io.respond_to?(:puts)
+      show_cursor
+    end
+
+    def play_confetti
+      return if skip?
+
+      Color.theme(@io)
+      hide_cursor
+      height = nil
+      delay = @delay || CONFETTI_DELAY
+      confetti_frames.each_with_index do |lines, index|
+        height ||= lines.size
+        home_cursor(height) if index.positive?
+        paint_lines(lines)
+        sleep delay
+      end
+      erase_block(height)
+    ensure
+      show_cursor
     end
 
     def frames
@@ -145,6 +161,39 @@ module Buzzsprout
 
     def mark_hex
       Color.theme(@io) == :light ? MARK_COLOR_LIGHT : MARK_COLOR_DARK
+    end
+
+    def hide_cursor
+      @cursor_hidden = true
+      @io.print "\e[?25l" if @io.respond_to?(:print)
+    end
+
+    def show_cursor
+      return unless @cursor_hidden
+
+      @cursor_hidden = false
+      @io.print "\e[?25h" if @io.respond_to?(:print)
+    end
+
+    # CSI n A preserves column on some terminals (Ghostty); CR + EL + ED
+    # wipe leftover braille/color so Welcome starts on a clean line.
+    def home_cursor(height)
+      return unless height&.positive?
+
+      @io.print "\e[#{height}A\r"
+    end
+
+    def paint_lines(lines)
+      lines.each do |line|
+        @io.print "\e[2K"
+        @io.puts line
+      end
+    end
+
+    def erase_block(height)
+      return unless height&.positive?
+
+      @io.print "\e[#{height}A\r\e[0J"
     end
   end
 end

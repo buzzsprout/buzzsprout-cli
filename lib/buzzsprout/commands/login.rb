@@ -49,6 +49,12 @@ module Buzzsprout
         Animation.new(io: @io).play
       end
 
+      def play_confetti
+        return if @options.no_animation?
+
+        Animation.new(io: @io).play_confetti
+      end
+
       def say_hello
         @io.puts Color.bold('Welcome to the Buzzsprout CLI', io: @io)
         @io.puts '=' * 40
@@ -88,6 +94,7 @@ module Buzzsprout
       end
 
       def celebrate(podcasts)
+        play_confetti
         list = wrap_list(podcasts)
         @io.puts ''
         @io.puts Color.green("You're in. Logged in and ready to buzz.", io: @io)
