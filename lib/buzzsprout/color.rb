@@ -54,5 +54,13 @@ module Buzzsprout
     def magenta(text, io: $stdout)
       paint(text, MAGENTA, io: io)
     end
+
+    def rgb(text, hex, io: $stdout)
+      value = hex.to_s.delete('#')
+      r = value[0, 2].to_i(16)
+      g = value[2, 2].to_i(16)
+      b = value[4, 2].to_i(16)
+      paint(text, "\e[38;2;#{r};#{g};#{b}m", io: io)
+    end
   end
 end

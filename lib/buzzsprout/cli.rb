@@ -32,7 +32,7 @@ module Buzzsprout
       Usage: buzzsprout [command] [args] [options]
 
       First run / auth
-        login, auth, init     ASCII intro, prompt for API token, test GET /podcasts
+        login, auth, init     Logo animation, prompt for API token, test GET /podcasts
         logout                Remove ~/.buzzsprout.json
         status, whoami        Show whether a token is saved
         use <podcast_id>      Remember a default podcast id

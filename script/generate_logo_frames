@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+# frozen-ish: regenerate assets/logo/frames.json from the Default wordmark.
+# Requires: Python 3 + Pillow. Uses rsvg-convert when available for a sharp SVG raster.
+
+import json
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+
+from PIL import Image
+
+ROOT = Path(__file__).resolve().parents[1]
+LOGO_DIR = ROOT / "assets" / "logo"
+SVG = LOGO_DIR / "buzzsprout-logo.svg"
+PNG = LOGO_DIR / "buzzsprout-wordmark.png"
+OUT = LOGO_DIR / "frames.json"
+
+BOLT_RGB = (97, 215, 82)
+MARK_RGB = (33, 69, 56)
+COLS = 76
+ROWS = 9
+DOTS = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (0, 3), (1, 3)]
+BITS = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80]
+
+
+def classify(pixel):
+    r, g, b, a = pixel
+    if a < 40:
+        return None
+    if r > 220 and g > 220 and b > 220:
+        return None
+    if g > r + 20 and g > 90:
+        return "bolt"
+    return "mark"
+
+
+def raster():
+    rsvg = shutil.which("rsvg-convert")
+    if rsvg and SVG.exists():
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "logo.png"
+            svg_text = SVG.read_text()
+            svg_text = svg_text.replace('<rect width="720" height="125" fill="#F5F5F5"/>', "")
+            svg_text = svg_text.replace(
+                '<rect x="-9.5" y="-9.5" width="739" height="426" rx="4.5" stroke="#9747FF" stroke-dasharray="10 5"/>',
+                "",
+            )
+            cleaned = Path(tmp) / "logo.svg"
+            cleaned.write_text(svg_text)
+            subprocess.check_call([rsvg, "-w", "1520", "-h", "264", str(cleaned), "-o", str(dest)])
+            return Image.open(dest).convert("RGBA")
+    return Image.open(PNG).convert("RGBA")
+
+
+def bbox(im, pad=4):
+    px = im.load()
+    w, h = im.size
+    minx, miny, maxx, maxy = w, h, 0, 0
+    found = False
+    for y in range(h):
+        for x in range(w):
+            if classify(px[x, y]):
+                found = True
+                minx = min(minx, x)
+                miny = min(miny, y)
+                maxx = max(maxx, x)
+                maxy = max(maxy, y)
+    if not found:
+        return im
+    return im.crop(
+        (
+            max(0, minx - pad),
+            max(0, miny - pad),
+            min(w, maxx + 1 + pad),
+            min(h, maxy + 1 + pad),
+        )
+    )
+
+
+def to_grid(im, cols, rows):
+    w, h = cols * 2, rows * 4
+    scaled = im.resize((w, h), Image.Resampling.LANCZOS)
+    px = scaled.load()
+    grid = []
+    for by in range(rows):
+        line = []
+        for bx in range(cols):
+            mask = 0
+            bolt = mark = 0
+            for bit, (dx, dy) in zip(BITS, DOTS):
+                kind = classify(px[bx * 2 + dx, by * 4 + dy])
+                if kind:
+                    mask |= bit
+                    if kind == "bolt":
+                        bolt += 1
+                    else:
+                        mark += 1
+            if mask == 0:
+                line.append((" ", "."))
+            else:
+                ch = chr(0x2800 + mask)
+                line.append((ch, "b" if bolt > mark else "m"))
+        grid.append(line)
+    return grid
+
+
+def compact_rows(grid):
+    while grid and all(cell[1] == "." for cell in grid[0]):
+        grid = grid[1:]
+    while grid and all(cell[1] == "." for cell in grid[-1]):
+        grid = grid[:-1]
+    return grid
+
+
+def pad_grid(grid, cols, rows):
+    """Center vertically; keep left-aligned (logo lockup)."""
+    if len(grid) < rows:
+        missing = rows - len(grid)
+        top = missing // 2
+        blank = [(" ", ".")] * cols
+        grid = [list(blank) for _ in range(top)] + grid
+        while len(grid) < rows:
+            grid.append(list(blank))
+    for row in grid:
+        if len(row) < cols:
+            row.extend([(" ", ".")] * (cols - len(row)))
+        del row[cols:]
+    return grid[:rows]
+
+
+def pack(grid):
+    text = ["".join(c[0] for c in row) for row in grid]
+    kind = ["".join(c[1] for c in row) for row in grid]
+    return {"text": text, "kind": kind}
+
+
+def mask_grid(base, keep):
+    out = []
+    for y, row in enumerate(base):
+        line = []
+        for x, cell in enumerate(row):
+            line.append(cell if keep(x, y, cell) else (" ", "."))
+        out.append(line)
+    return out
+
+
+def main():
+    image = bbox(raster())
+    base = pad_grid(compact_rows(to_grid(image, COLS, ROWS)), COLS, ROWS)
+    height = len(base)
+    width = len(base[0])
+    occupied = [
+        any(base[y][x][1] != "." for y in range(height)) for x in range(width)
+    ]
+    x = 0
+    while x < width and not occupied[x]:
+        x += 1
+    while x < width and occupied[x]:
+        x += 1
+    icon_cols = min(width, x + 1)
+
+    frames = []
+    frames.append(pack(mask_grid(base, lambda *_: False)))
+
+    # Sprout grows from the ground (bottom → top of the mark).
+    for step in range(1, height + 1):
+        threshold = height - step
+        frame = pack(
+            mask_grid(
+                base,
+                lambda x, y, _cell, t=threshold, ic=icon_cols: x < ic and y >= t,
+            )
+        )
+        if any(ch.strip() for ch in frame["text"]):
+            frames.append(frame)
+
+    # Hold the mark, then wipe the wordmark in from the left.
+    frames.append(pack(mask_grid(base, lambda x, y, _cell, ic=icon_cols: x < ic)))
+    wipe_steps = 8
+    remaining = width - icon_cols
+    for step in range(1, wipe_steps + 1):
+        edge = icon_cols + int(remaining * step / wipe_steps)
+        frames.append(pack(mask_grid(base, lambda x, y, _cell, e=edge: x < e)))
+
+    for _ in range(3):
+        frames.append(pack(base))
+
+    payload = {
+        "source": "Figma Web-Assets Logo Version=Default (41:618)",
+        "width": width,
+        "height": height,
+        "delay": 0.055,
+        "colors": {"b": "#61D752", "m": "#214538"},
+        "frames": frames,
+    }
+    OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    print(f"wrote {OUT} ({len(frames)} frames, {width}x{height})")
+    print("\n".join(frames[-1]["text"]))
+
+
+if __name__ == "__main__":
+    main()

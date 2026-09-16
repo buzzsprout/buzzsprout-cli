@@ -6,7 +6,7 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 
 ## Features
 
-- **First run** — ASCII intro (placeholder frames, ready to swap for a logo), token prompt, live `GET /api/podcasts`, celebration, token saved to `~/.buzzsprout.json`
+- **First run** — ASCII intro from the Default Buzzsprout wordmark (braille reveal of the logo mark, then “Buzzsprout”), token prompt, live `GET /api/podcasts`, celebration, token saved to `~/.buzzsprout.json`
 - **Token auth** — `Authorization: Token token=…` from **Profile → API** (not OAuth)
 - **Identifiable User-Agent** — `BuzzsproutCLI/0.1.0` on every request
 - **Rate limits** — 60 req/min; retries `429` with backoff
@@ -37,7 +37,7 @@ Then either:
 
 With no config yet, `buzzsprout` (or `buzzsprout login`) will:
 
-1. Play a short ASCII animation (placeholder bee + sprout — swap `lib/buzzsprout/animation.rb` when a logo asset exists; this does not wait on Figma)
+1. Play a short braille animation of the Default Buzzsprout logo (icon grows, then the wordmark wipes in). Frames are generated from [`assets/logo/`](assets/logo/) — Figma Web-Assets, Version=Default. Light/Dark variants can be added later.
 2. Prompt for your API token (**Profile → API** in Buzzsprout)
 3. Test the connection:
 

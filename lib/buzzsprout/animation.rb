@@ -1,14 +1,18 @@
 # frozen_string_literal: true
 
-# Placeholder ASCII frames for first-run. Replace FRAMES later with
-# logo-derived art; keep a consistent line count so in-place redraw works.
+require 'json'
+
+# Terminal animation of the Default Buzzsprout wordmark (Figma 41:618).
+# Frames are braille rasters of assets/logo; swap Light/Dark later by
+# generating another frames.json — Default is source of truth for v0.
 
 module Buzzsprout
   class Animation
-    WIDTH = 52
     DEFAULT_DELAY = 0.055
+    ASSET_DIR = File.expand_path('../../assets/logo', __dir__)
+    FRAMES_FILE = File.join(ASSET_DIR, 'frames.json')
 
-    def initialize(io: $stdout, delay: DEFAULT_DELAY, force: false)
+    def initialize(io: $stdout, delay: nil, force: false)
       @io = io
       @delay = delay
       @force = force
@@ -21,12 +25,13 @@ module Buzzsprout
       show = "\e[?25h"
       @io.print hide
       height = nil
+      delay = @delay || self.class.data['delay'] || DEFAULT_DELAY
       frames.each_with_index do |frame, index|
         lines = colorize(frame)
         height ||= lines.size
         @io.print "\e[#{height}A" if index.positive?
         lines.each { |line| @io.puts line }
-        sleep @delay
+        sleep delay
       end
     ensure
       @io.print show if @io.respond_to?(:print)
@@ -38,78 +43,23 @@ module Buzzsprout
     end
 
     def self.frames
-      @frames ||= build_frames
+      data.fetch('frames')
     end
 
-    def self.build_frames
-      bee = ['      \ /', '      (o>', '      / \\']
-      flap = ['      / \\', '      (o>', '      \\ /']
-      ground = '  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-      scenes = []
-
-      4.times do |i|
-        sprite = i.even? ? bee : flap
-        pad = ' ' * (2 + (i * 6))
-        scenes << compose(
-          '',
-          pad + sprite[0],
-          pad + sprite[1],
-          pad + sprite[2],
-          '',
-          '',
-          ground,
-          center(''),
-          center('')
-        )
-      end
-
-      ['', '.', '|', '\\|/', '\\|/', '\\|/'].each_with_index do |plant, idx|
-        sprite = idx.even? ? bee : flap
-        pad = ' ' * 24
-        title = if idx >= 4
-                  'B U Z Z S P R O U T'
-                elsif idx >= 2
-                  'b u z z . . .'
-                else
-                  ''
-                end
-        tagline = idx >= 5 ? 'podcasts, take flight' : ''
-        scenes << compose(
-          '',
-          pad + sprite[0],
-          pad + sprite[1],
-          pad + sprite[2],
-          center(plant),
-          '',
-          ground,
-          center(title),
-          center(tagline)
-        )
-      end
-
-      3.times do
-        scenes << compose(
-          '',
-          (' ' * 24) + bee[0],
-          (' ' * 24) + bee[1],
-          (' ' * 24) + bee[2],
-          center('\\|/'),
-          '',
-          ground,
-          center('B U Z Z S P R O U T'),
-          center('podcasts, take flight')
-        )
-      end
-
-      scenes
+    def self.width
+      data.fetch('width')
     end
 
-    def self.compose(*lines)
-      lines.map { |line| line.to_s.ljust(WIDTH) }
+    def self.height
+      data.fetch('height')
     end
 
-    def self.center(text)
-      text.to_s.center(WIDTH)
+    def self.data
+      @data ||= JSON.parse(File.read(FRAMES_FILE))
+    end
+
+    def self.reset!
+      @data = nil
     end
 
     private
@@ -124,16 +74,17 @@ module Buzzsprout
     end
 
     def colorize(frame)
-      frame.map do |line|
-        colored = line.dup
-        colored.gsub!('B U Z Z S P R O U T', Color.cyan('B U Z Z S P R O U T', io: @io))
-        colored.gsub!('podcasts, take flight', Color.dim('podcasts, take flight', io: @io))
-        if Color.enabled?(@io)
-          colored.gsub!('~', "#{Color::GREEN}~#{Color::RESET}")
-          colored.gsub!('(o>', Color.yellow('(o>', io: @io))
-          colored.gsub!('\\|/', Color.green('\\|/', io: @io))
-        end
-        colored
+      text_rows = frame['text']
+      kind_rows = frame['kind']
+      colors = self.class.data.fetch('colors', {})
+      text_rows.each_with_index.map do |line, y|
+        kinds = kind_rows[y].to_s
+        next line unless Color.enabled?(@io)
+
+        line.chars.each_with_index.map do |char, x|
+          hex = colors[kinds[x]]
+          hex ? Color.rgb(char, hex, io: @io) : char
+        end.join
       end
     end
   end
