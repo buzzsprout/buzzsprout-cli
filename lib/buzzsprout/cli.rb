@@ -22,6 +22,8 @@ require_relative 'commands/brand_affiliations'
 require_relative 'commands/chapters'
 require_relative 'commands/transcripts'
 require_relative 'commands/listings'
+require_relative 'commands/podrolls'
+require_relative 'commands/feed_verifications'
 require_relative 'commands/fan_mail'
 require_relative 'commands/skills'
 
