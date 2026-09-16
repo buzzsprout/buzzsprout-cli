@@ -12,11 +12,21 @@ class InstallTest < Buzzsprout::Test
     File.expand_path('..', __dir__)
   end
 
-  def test_readme_documents_curl_install
+  def test_readme_documents_private_repo_install
     readme = File.read(File.expand_path('../README.md', __dir__))
-    assert_includes readme, 'curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash'
+    assert_includes readme, 'git clone --depth 1 https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli'
+    assert_includes readme, '~/.buzzsprout-cli/script/install'
     assert_includes readme, 'buzzsprout login'
-    assert_includes readme, 'BUZZSPROUT_CLI_REF'
+    assert_includes readme, 'git@github.com:higher-pixels/buzzsprout-cli.git'
+    assert_includes readme, 'gh api'
+    assert_match(/private/, readme)
+    assert_match(/404/, readme)
+    # Unauthenticated raw curl is documented only as a 404-while-private footnote.
+    curl_idx = readme.index('curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash')
+    clone_idx = readme.index('git clone --depth 1 https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli')
+    refute_nil curl_idx
+    refute_nil clone_idx
+    assert_operator clone_idx, :<, curl_idx
   end
 
   def test_install_script_is_self_contained

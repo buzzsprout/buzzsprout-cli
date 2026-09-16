@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 # Installer for https://github.com/higher-pixels/buzzsprout-cli
 #
-# After this lands on main:
-#   curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
+# This repo is private. Unauthenticated raw.githubusercontent.com curl 404s.
+# Primary install (uses your git credentials):
+#   git clone --depth 1 https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
+#   ~/.buzzsprout-cli/script/install
 #   buzzsprout login
 #
-# Pin a branch or tag:
-#   curl -fsSL …/main/script/install | BUZZSPROUT_CLI_REF=v0.1.0 bash
+# SSH: git clone --depth 1 git@github.com:higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
+# Already have a checkout: ./script/install
+#
+# Authenticated gh (still needs git clone credentials for the piped clone):
+#   gh api "repos/higher-pixels/buzzsprout-cli/contents/script/install?ref=main" --jq .content | base64 --decode | bash
+#
+# Raw curl is only for a future public repo — it 404s while private:
+#   curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
 #
 # This script only checks Ruby 3.0+, clones this GitHub repo (or uses a local
 # checkout), and symlinks bin/buzzsprout onto ~/.local/bin. No sudo. No other

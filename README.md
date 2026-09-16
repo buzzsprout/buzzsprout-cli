@@ -15,24 +15,48 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 
 ## Installation
 
-Ruby 3.0+ is required.
+Ruby 3.0+ is required. This GitHub repo is **private**: unauthenticated `raw.githubusercontent.com` (and the public API) **404**. Clone with your existing GitHub credentials, then run the installer.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
+git clone --depth 1 https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
+~/.buzzsprout-cli/script/install
 buzzsprout login
 ```
 
-That script (and only that script) checks for Ruby 3.0+, clones this repo into `~/.buzzsprout-cli`, and symlinks `bin/buzzsprout` to `~/.local/bin` (or `~/bin` if that directory is already on PATH). It does not `sudo`, and it will not overwrite `~/.buzzsprout-cli` if that path is not this repo or has uncommitted changes.
-
-Pin a branch or tag with `BUZZSPROUT_CLI_REF` (default `main`):
+SSH:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | BUZZSPROUT_CLI_REF=v0.1.0 bash
+git clone --depth 1 git@github.com:higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
+~/.buzzsprout-cli/script/install
+buzzsprout login
 ```
 
-The raw GitHub URL’s ref should be a tree that contains `script/install` — after merge that is `main`. Optional overrides: `BUZZSPROUT_CLI_HOME` (clone dir), `BUZZSPROUT_CLI_BIN` (where the executable goes), `BUZZSPROUT_CLI_REPO` (git remote).
+If you already have a checkout: `./script/install` from the repo root. The script checks for Ruby 3.0+ and symlinks `bin/buzzsprout` to `~/.local/bin` (or `~/bin` if that directory is already on PATH). It does not `sudo`. If `~/.buzzsprout-cli` already exists and is this repo, run the install script from that clone instead of cloning again.
 
-From a checkout you already have: `./script/install`.
+A specific branch (until this lands on `main`, use the PR branch):
+
+```bash
+git clone --depth 1 -b cursor/buzzsprout-cli-3c1e https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
+~/.buzzsprout-cli/script/install
+buzzsprout login
+```
+
+Authenticated one-liner if you have [`gh`](https://cli.github.com/) logged in (`gh auth status`). Quote the path so `?ref=` is not eaten by the shell. The piped script still `git clone`s, so GitHub git credentials (HTTPS or SSH) are required too:
+
+```bash
+gh api "repos/higher-pixels/buzzsprout-cli/contents/script/install?ref=main" --jq .content | base64 --decode | bash
+```
+
+Match `ref=` with `BUZZSPROUT_CLI_REF` when installing a non-default branch. Use `BUZZSPROUT_CLI_REPO=git@github.com:higher-pixels/buzzsprout-cli.git` if your `gh` is authenticated but `git clone` over HTTPS is not.
+
+If this repo is ever public, unauthenticated raw curl would work. **While it is private, that URL 404s:**
+
+```bash
+# 404 while the repo is private — do not use this as the primary install
+curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
+```
+
+Optional overrides: `BUZZSPROUT_CLI_HOME` (clone dir), `BUZZSPROUT_CLI_BIN` (where the executable goes), `BUZZSPROUT_CLI_REPO` (git remote), `BUZZSPROUT_CLI_REF` (branch or tag, default `main`).
 
 ### From source
 
