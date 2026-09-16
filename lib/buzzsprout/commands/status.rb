@@ -49,11 +49,10 @@ module Buzzsprout
     end
 
     class Use < Base
-      USAGE = 'buzzsprout use <podcast_id>'
+      USAGE = 'buzzsprout use [podcast_id|--podcast ID|--in ID]'
 
       def run
-        id = shift_id!('podcast_id')
-        Config.save(default_podcast_id: id)
+        id = resolve_podcast_id!(persist: true)
         @io.puts "Default podcast set to #{id}."
         0
       end

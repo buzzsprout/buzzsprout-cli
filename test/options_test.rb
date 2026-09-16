@@ -21,4 +21,20 @@ class OptionsTest < Buzzsprout::Test
     assert_equal 'abc', options.token
     assert_empty args
   end
+
+  def test_podcast_flag_and_in_alias
+    args = ['episodes', 'list', '--podcast', '10']
+    options = Buzzsprout::Options.parse!(args)
+    assert_equal '10', options.podcast_id
+    assert_equal %w[episodes list], args
+
+    args = ['episodes', 'list', '--in=20']
+    options = Buzzsprout::Options.parse!(args)
+    assert_equal '20', options.podcast_id
+    assert_equal %w[episodes list], args
+
+    args = ['--podcast', '10', '--in', '20']
+    options = Buzzsprout::Options.parse!(args)
+    assert_equal '10', options.podcast_id
+  end
 end

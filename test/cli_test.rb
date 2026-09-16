@@ -179,6 +179,214 @@ class CLITest < Buzzsprout::Test
         assert_equal 0, status, err
         assert_match(/Pilot/, out)
         assert_match(/private/, out)
+        refute api.requests.any? { |req| req[:path] == '/api/podcasts' }
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_episodes_list_podcast_flag_and_in_alias_skip_picker
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok')
+      api = FakeApi.new(
+        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_plays: 0 }] },
+        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_plays: 3 }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['episodes', 'list', '--podcast', '10'], tty: true, stdin_data: "\r")
+        assert_equal 0, status, err
+        assert_match(/Pilot/, out)
+        refute_match(/Select a podcast/, out)
+
+        status, out, err = run_cli(['episodes', 'list', '--in', '20'], tty: true, stdin_data: "\r")
+        assert_equal 0, status, err
+        assert_match(/Youth ep/, out)
+        refute_match(/Select a podcast/, out)
+        refute api.requests.any? { |req| req[:path] == '/api/podcasts' }
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_episodes_list_without_id_on_tty_opens_picker
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      api = FakeApi.new(
+        '/api/podcasts' => {
+          status: 200,
+          body: [
+            { id: 10, title: 'Life Empowerment' },
+            { id: 20, title: 'Youth Podcast' }
+          ]
+        },
+        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_plays: 1 }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['episodes', 'list'], tty: true, stdin_data: "\e[B\r")
+        assert_equal 0, status, err
+        assert_match(/Select a podcast/, out)
+        assert_match(/Youth ep/, out)
+        assert_match(/Using podcast 20/, out)
+        assert api.requests.any? { |req| req[:path] == '/api/podcasts' }
+        assert api.requests.any? { |req| req[:path] == '/api/20/episodes' }
+        refute api.requests.any? { |req| req[:path] == '/api/10/episodes' }, 'saved default must not skip the picker'
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_episodes_list_filter_selects_on_tty
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok')
+      api = FakeApi.new(
+        '/api/podcasts' => {
+          status: 200,
+          body: [
+            { id: 10, title: 'Life Empowerment' },
+            { id: 20, title: 'Youth Podcast' }
+          ]
+        },
+        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_plays: 1 }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['episodes', 'list'], tty: true, stdin_data: "youth\r")
+        assert_equal 0, status, err
+        assert_match(/Youth ep/, out)
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_episodes_list_without_id_noninteractive_errors
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok')
+      status, _, err = run_cli(['episodes', 'list'])
+      assert_equal 1, status
+      assert_match(/Pass --podcast ID/, err)
+      assert_match(/buzzsprout use/, err)
+    end
+  end
+
+  def test_json_uses_saved_default_and_never_opens_picker
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      api = FakeApi.new(
+        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_plays: 0 }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['episodes', 'list', '--json'], tty: true, stdin_data: "\r")
+        assert_equal 0, status, err
+        assert_match(/Pilot/, out)
+        refute_match(/Select a podcast/, out)
+        refute api.requests.any? { |req| req[:path] == '/api/podcasts' }
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_noninteractive_env_never_opens_picker
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok')
+      ENV['BUZZSPROUT_NONINTERACTIVE'] = '1'
+      status, out, err = run_cli(['episodes', 'list'], tty: true, stdin_data: "\r")
+      assert_equal 1, status
+      assert_match(/Pass --podcast ID/, err)
+      refute_match(/Select a podcast/, out)
+    end
+  end
+
+  def test_use_without_args_picks_and_saves
+    with_config do |path|
+      Buzzsprout::Config.save(api_token: 'ok')
+      api = FakeApi.new(
+        '/api/podcasts' => {
+          status: 200,
+          body: [
+            { id: 10, title: 'Life Empowerment' },
+            { id: 20, title: 'Youth Podcast' }
+          ]
+        }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['use'], tty: true, stdin_data: "\e[B\r")
+        assert_equal 0, status, err
+        assert_match(/Default podcast set to 20/, out)
+        saved = JSON.parse(File.read(path), symbolize_names: true)
+        assert_equal 20, saved[:default_podcast_id]
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_use_with_id_skips_picker
+    with_config do |path|
+      Buzzsprout::Config.save(api_token: 'ok')
+      status, out, err = run_cli(['use', '10'], tty: true, stdin_data: "\r")
+      assert_equal 0, status, err
+      assert_match(/Default podcast set to 10/, out)
+      refute_match(/Select a podcast/, out)
+      saved = JSON.parse(File.read(path), symbolize_names: true)
+      assert_equal '10', saved[:default_podcast_id].to_s
+    end
+  end
+
+  def test_picker_cancel_exits_cleanly
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok')
+      api = FakeApi.new(
+        '/api/podcasts' => {
+          status: 200,
+          body: [
+            { id: 10, title: 'Life Empowerment' },
+            { id: 20, title: 'Youth Podcast' }
+          ]
+        }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['episodes', 'list'], tty: true, stdin_data: "\e")
+        assert_equal 1, status
+        assert_match(/cancelled/, err)
+        refute_match(/Error:/, err)
+        refute_match(/Pilot/, out)
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_login_tty_picks_default_after_success
+    with_config do |path|
+      api = FakeApi.new(
+        '/api/podcasts' => {
+          status: 200,
+          body: [
+            { id: 10, title: 'Life Empowerment' },
+            { id: 20, title: 'Youth Podcast' }
+          ]
+        }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['login', '--no-animation'], tty: true, stdin_data: "super-secret-token\n\e[B\r")
+        assert_equal 0, status, err
+        assert_match(/You're in/, out)
+        assert_match(/Select a podcast/, out)
+        assert_match(/Default podcast set to 20/, out)
+        saved = JSON.parse(File.read(path), symbolize_names: true)
+        assert_equal 'super-secret-token', saved[:api_token]
+        assert_equal 20, saved[:default_podcast_id]
       ensure
         api.shutdown
       end

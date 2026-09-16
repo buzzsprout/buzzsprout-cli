@@ -87,7 +87,7 @@ With no config yet, `buzzsprout` (or `buzzsprout login`) will:
    Accept: application/json
    ```
 
-4. On success: a short ASCII confetti burst (TTY only), then celebrate, list your podcasts, and save the token to `~/.buzzsprout.json` (mode `0600`)
+4. On success: a short ASCII confetti burst (TTY only), then celebrate, **pick a podcast** if you have more than one (arrow keys, type to filter, Enter), and save the token to `~/.buzzsprout.json` (mode `0600`)
 5. On failure: print a clear error and offer to retry / re-enter the token
 
 ```bash
@@ -115,13 +115,30 @@ Skip the animation with `--no-animation` or `BUZZSPROUT_NO_ANIMATION=1`.
 
 ```bash
 buzzsprout status
-buzzsprout use 10
+buzzsprout use            # interactive picker, then save as default
+buzzsprout use 10         # or pass the id / --podcast / --in
 buzzsprout logout
+```
+
+## Podcast selection
+
+Any command that needs a podcast id goes through the same resolver:
+
+1. **Explicit** — positional id, `--podcast ID`, `--in ID`, or `BUZZSPROUT_PODCAST_ID`
+2. **TTY** — interactive selector (`GET /api/podcasts`, ↑/↓, type to filter, Enter). A saved `default_podcast_id` is highlighted, not auto-used. A single podcast is selected without the UI.
+3. **Noninteractive** — `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or no TTY: use the saved default, or error with “pass `--podcast ID` or run `buzzsprout use`”
+
+Esc / Ctrl-C cancels the picker. Agents never block on it.
+
+```bash
+buzzsprout episodes list --podcast 10
+buzzsprout episodes list --in 10
+buzzsprout episodes list              # picker on a TTY
 ```
 
 ## Commands
 
-Global flags: `--json`, `--body '{…}'`, `--file PATH`, `--dry-run`, `--podcast ID`, `--no-animation`.
+Global flags: `--json`, `--body '{…}'`, `--file PATH`, `--dry-run`, `--podcast ID` (alias `--in`), `--no-animation`.
 
 ### Podcasts
 
@@ -135,6 +152,7 @@ buzzsprout podcasts update 10 --title "Life Empowerment"
 
 ```bash
 buzzsprout episodes list 10
+buzzsprout episodes list              # picker if you omit the id
 buzzsprout episodes show 10 788881
 buzzsprout episodes create 10 --title "My episode" --private
 buzzsprout episodes publish 10 788881
@@ -187,7 +205,8 @@ Copy or symlink into whatever directory your agent already loads (`~/.cursor/ski
 | Variable | Purpose |
 | --- | --- |
 | `BUZZSPROUT_API_TOKEN` | Token override |
-| `BUZZSPROUT_PODCAST_ID` | Default podcast id |
+| `BUZZSPROUT_PODCAST_ID` | Explicit podcast id for this process (skips the picker) |
+| `BUZZSPROUT_NONINTERACTIVE=1` | Never open the podcast picker |
 | `BUZZSPROUT_CONFIG` | Config path (default `~/.buzzsprout.json`) |
 | `BUZZSPROUT_API_BASE` | API base (default `https://www.buzzsprout.com/api`) |
 | `BUZZSPROUT_NO_ANIMATION=1` | Skip the intro |

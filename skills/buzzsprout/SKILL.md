@@ -25,9 +25,10 @@ Accept: application/json
 Resolution order: `--token` (login only) → `BUZZSPROUT_API_TOKEN` → `~/.buzzsprout.json`.
 
 ```bash
-buzzsprout login                  # animation → prompt → GET /podcasts → save
+buzzsprout login                  # animation → prompt → GET /podcasts → picker if 2+ shows → save
 buzzsprout login --no-animation --token "$BUZZSPROUT_API_TOKEN"
 buzzsprout status
+buzzsprout use                    # picker (or pass an id / --podcast / --in)
 buzzsprout logout
 ```
 
@@ -86,7 +87,7 @@ Extensionless paths are canonical; `.json` is also accepted by the API.
 | Insertion points | `buzzsprout insertion-points` | `insertion_points` |
 | Soundbites | `buzzsprout soundbites` | `soundbites` |
 
-`--json` prints the API payload. `--dry-run` prints the request without sending it. `--body '{…}'` supplies a JSON body.
+`--json` prints the API payload. `--dry-run` prints the request without sending it. `--body '{…}'` supplies a JSON body. `--podcast ID` / `--in ID` selects a podcast without the interactive picker. `--json` and `BUZZSPROUT_NONINTERACTIVE=1` never open the picker.
 
 ## Load this skill pack
 

@@ -8,6 +8,7 @@ require_relative 'options'
 require_relative 'client'
 require_relative 'formatter'
 require_relative 'animation'
+require_relative 'podcast_picker'
 require_relative 'commands/base'
 require_relative 'commands/login'
 require_relative 'commands/status'
@@ -35,13 +36,13 @@ module Buzzsprout
         login, auth, init     Logo animation, prompt for API token, test GET /podcasts
         logout                Remove ~/.buzzsprout.json
         status, whoami        Show whether a token is saved
-        use <podcast_id>      Remember a default podcast id
+        use [podcast_id]      Remember a default podcast (picker if omitted)
 
       Podcasts & episodes
         podcasts [list]
         podcasts show <id>
         podcasts update <id> --title "…"
-        episodes list <podcast_id>
+        episodes list [podcast_id]
         episodes show <podcast_id> <episode_id>
         episodes create <podcast_id> --title "…" [--private]
         episodes update|publish|unpublish <podcast_id> <episode_id>
@@ -69,7 +70,7 @@ module Buzzsprout
         --body '{…}'          JSON request body
         --file PATH           Upload a local file
         --token TOKEN         Override the saved / env token for login
-        --podcast ID          Default podcast id for this invocation
+        --podcast ID, --in ID Podcast id for this invocation (skips the picker)
         --dry-run             Print the request without sending it
         --no-animation        Skip the first-run ASCII animation
         --help, -h            Show this help
@@ -77,7 +78,8 @@ module Buzzsprout
 
       Environment
         BUZZSPROUT_API_TOKEN  Token override (never commit this)
-        BUZZSPROUT_PODCAST_ID Default podcast id
+        BUZZSPROUT_PODCAST_ID Explicit podcast id (skips the picker)
+        BUZZSPROUT_NONINTERACTIVE=1  Never open the podcast picker
         BUZZSPROUT_CONFIG     Config path (default ~/.buzzsprout.json)
         BUZZSPROUT_API_BASE   API base (default https://www.buzzsprout.com/api)
         BUZZSPROUT_NO_ANIMATION=1
@@ -154,6 +156,9 @@ module Buzzsprout
 
       status = klass.new(args, options, io: @io, err: @err, stdin: @stdin).run
       status.nil? ? 0 : status
+    rescue PodcastPicker::Cancelled => e
+      @err.puts e.message
+      1
     rescue Client::Unauthorized => e
       @err.puts "Error: #{e.message}"
       @err.puts "Run 'buzzsprout login' to save a new token."

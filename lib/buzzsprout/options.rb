@@ -40,6 +40,7 @@ module Buzzsprout
       @dry_run = extract_flag!(args, '--dry-run')
       @token = extract_option!(args, '--token')
       @podcast_id = extract_option!(args, '--podcast')
+      @podcast_id ||= extract_option!(args, '--in')
       @file = extract_option!(args, '--file')
       @format = extract_option!(args, '--format')
       raw_body = extract_option!(args, '--body')

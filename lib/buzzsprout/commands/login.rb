@@ -86,8 +86,10 @@ module Buzzsprout
 
       def persist(token, podcasts)
         config = { api_token: token }
-        list = wrap_list(podcasts)
-        if list.size == 1
+        list = PodcastPicker.wrap_list(podcasts)
+        if (explicit = @options.podcast_id || ENV['BUZZSPROUT_PODCAST_ID'])
+          config[:default_podcast_id] = explicit
+        elsif list.size == 1
           config[:default_podcast_id] = list.first['id']
         end
         Config.save(config)
@@ -95,7 +97,7 @@ module Buzzsprout
 
       def celebrate(podcasts)
         play_confetti
-        list = wrap_list(podcasts)
+        list = PodcastPicker.wrap_list(podcasts)
         @io.puts ''
         @io.puts Color.green("You're in. Logged in and ready to buzz.", io: @io)
         @io.puts Color.dim("Token saved to #{Config.config_file} (mode 0600).", io: @io)
@@ -103,15 +105,57 @@ module Buzzsprout
         if list.empty?
           @io.puts 'No podcasts on this account yet — create one in Buzzsprout, then run:'
           @io.puts '  buzzsprout podcasts'
-        else
-          @io.puts Color.bold("#{list.size} podcast#{list.size == 1 ? '' : 's'} ready:", io: @io)
-          list.each do |podcast|
-            @io.puts "  *  #{podcast['id']}  #{podcast['title']}"
-          end
+        elsif list.size == 1
+          podcast = list.first
+          @io.puts "Default podcast: #{podcast['id']}  #{podcast['title']}"
           @io.puts ''
-          @io.puts 'Try:  buzzsprout podcasts'
-          @io.puts '      buzzsprout episodes list <podcast_id>'
+          print_next_steps
+        else
+          pick_default_after_login(list)
         end
+      end
+
+      def pick_default_after_login(list)
+        if !@options.podcast_id.to_s.empty? || !ENV['BUZZSPROUT_PODCAST_ID'].to_s.empty?
+          print_podcast_list(list)
+          print_next_steps
+          return
+        end
+
+        unless interactive_podcast_picker?
+          print_podcast_list(list)
+          @io.puts 'Set a default with:  buzzsprout use'
+          print_next_steps
+          return
+        end
+
+        begin
+          chosen = PodcastPicker.choose!(
+            list,
+            io: @io,
+            stdin: @stdin,
+            default_id: Config.default_podcast_id,
+            auto_single: false
+          )
+          Config.save(default_podcast_id: chosen['id'])
+          @io.puts "Default podcast set to #{chosen['id']}  #{chosen['title']}."
+        rescue PodcastPicker::Cancelled
+          @io.puts 'No default podcast set. Run `buzzsprout use` when you are ready.'
+        end
+        print_next_steps
+      end
+
+      def print_next_steps
+        @io.puts 'Try:  buzzsprout podcasts'
+        @io.puts '      buzzsprout episodes list'
+      end
+
+      def print_podcast_list(list)
+        @io.puts Color.bold("#{list.size} podcast#{list.size == 1 ? '' : 's'} ready:", io: @io)
+        list.each do |podcast|
+          @io.puts "  *  #{podcast['id']}  #{podcast['title']}"
+        end
+        @io.puts ''
       end
 
       def retry?
@@ -124,13 +168,6 @@ module Buzzsprout
         answer.empty? || %w[y yes].include?(answer.downcase)
       end
 
-      def wrap_list(data)
-        case data
-        when Array then data
-        when Hash then [data]
-        else []
-        end
-      end
     end
   end
 end

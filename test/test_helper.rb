@@ -10,12 +10,26 @@ require 'fileutils'
 require 'buzzsprout/cli'
 
 module Buzzsprout
+  class FakeTty < StringIO
+    def tty?
+      true
+    end
+
+    def raw
+      yield self
+    end
+
+    def noecho
+      yield self
+    end
+  end
+
   class Test < Minitest::Test
     def setup
       @env_keys = %w[
         BUZZSPROUT_API_TOKEN BUZZSPROUT_PODCAST_ID BUZZSPROUT_CONFIG
         BUZZSPROUT_API_BASE BUZZSPROUT_NO_ANIMATION BUZZSPROUT_THEME
-        BUZZSPROUT_NO_COLOR NO_COLOR COLORFGBG CI
+        BUZZSPROUT_NO_COLOR BUZZSPROUT_NONINTERACTIVE NO_COLOR COLORFGBG CI
       ]
       @saved_env = @env_keys.to_h { |key| [key, ENV[key]] }
       @env_keys.each { |key| ENV.delete(key) }
@@ -47,10 +61,10 @@ module Buzzsprout
       end
     end
 
-    def run_cli(argv, stdin_data: '')
+    def run_cli(argv, stdin_data: '', tty: false)
       stdout = StringIO.new
       stderr = StringIO.new
-      stdin = StringIO.new(stdin_data)
+      stdin = tty ? FakeTty.new(stdin_data) : StringIO.new(stdin_data)
       status = CLI.new(io: stdout, err: stderr, stdin: stdin).run(argv)
       [status, stdout.string, stderr.string]
     end
