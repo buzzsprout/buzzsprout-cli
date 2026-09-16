@@ -37,12 +37,14 @@ Resolution order inside the CLI (not for agents to read): env `BUZZSPROUT_API_TO
 ```bash
 buzzsprout login                  # animation → prompt → GET /podcasts → picker if 2+ shows → save
 buzzsprout login --no-animation
+buzzsprout login --install-skills # also copy agent skills (no prompt)
+buzzsprout login --no-skills      # skip the post-login skills offer
 buzzsprout status
 buzzsprout podcast use            # picker to change the saved podcast (or pass an id / --podcast / --in)
 buzzsprout logout
 ```
 
-First run with no args and no saved token starts login automatically. Config lives at `~/.buzzsprout.json` (mode `0600` on Unix). Do not open it for the token value.
+First run with no args and no saved token starts login automatically. Config lives at `~/.buzzsprout.json` (mode `0600` on Unix). Do not open it for the token value. After auth succeeds, login may offer to install these skills into `~/.cursor/skills` (or `BUZZSPROUT_SKILLS_DIR` / `--dir`) unless they are already present.
 
 ## Base URL
 
@@ -92,6 +94,7 @@ Extensionless paths are canonical; `.json` is also accepted by the API.
 
 ```bash
 buzzsprout skills install --dir ~/.cursor/skills
+# or accept the prompt after `buzzsprout login`
 ```
 
 See `skills/README.md` in the repo for Cursor / Claude Code paths.

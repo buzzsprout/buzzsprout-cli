@@ -37,6 +37,7 @@ module Buzzsprout
 
       First run / auth
         login, auth, init     Logo animation, prompt for API token, test GET /podcasts
+                              After success, may offer to install agent skills
         logout                Remove ~/.buzzsprout.json
         status, whoami        Show whether a token is saved
 
@@ -77,14 +78,17 @@ module Buzzsprout
         --podcast ID, --in ID Podcast id for this invocation (skips the picker)
         --dry-run             Print the request without sending it
         --no-animation        Skip the first-run ASCII animation
+        --install-skills      After login, install agent skills without prompting
+        --no-skills           Skip the post-login skills prompt
         --help, -h            Show this help
         --version, -v         Show version
 
       Environment
         BUZZSPROUT_API_TOKEN  Token override (never print or commit this)
         BUZZSPROUT_PODCAST_ID Explicit podcast id (skips the picker)
-        BUZZSPROUT_NONINTERACTIVE=1  Never open the podcast picker
+        BUZZSPROUT_NONINTERACTIVE=1  Never open the podcast picker or skills prompt
         BUZZSPROUT_CONFIG     Config path (default ~/.buzzsprout.json)
+        BUZZSPROUT_SKILLS_DIR Skills install destination (default ~/.cursor/skills)
         BUZZSPROUT_API_BASE   API base (default https://www.buzzsprout.com/api)
         BUZZSPROUT_NO_ANIMATION=1
         BUZZSPROUT_THEME      dark|light (intro contrast; auto-detects otherwise)

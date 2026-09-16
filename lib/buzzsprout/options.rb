@@ -4,7 +4,7 @@ require 'json'
 
 module Buzzsprout
   class Options
-    attr_reader :json, :no_animation, :dry_run, :token, :podcast_id, :body, :file, :format
+    attr_reader :json, :no_animation, :dry_run, :token, :podcast_id, :body, :file, :format, :dir, :install_skills, :skip_skills
 
     def initialize
       @json = false
@@ -15,6 +15,9 @@ module Buzzsprout
       @body = nil
       @file = nil
       @format = nil
+      @dir = nil
+      @install_skills = false
+      @skip_skills = false
       @fields = {}
     end
 
@@ -30,6 +33,14 @@ module Buzzsprout
       @no_animation || ENV['BUZZSPROUT_NO_ANIMATION'] == '1'
     end
 
+    def install_skills?
+      @install_skills
+    end
+
+    def skip_skills?
+      @skip_skills
+    end
+
     def fields
       @fields
     end
@@ -43,6 +54,9 @@ module Buzzsprout
       @podcast_id ||= extract_option!(args, '--in')
       @file = extract_option!(args, '--file')
       @format = extract_option!(args, '--format')
+      @dir = extract_option!(args, '--dir')
+      @install_skills = extract_flag!(args, '--install-skills')
+      @skip_skills = extract_flag!(args, '--no-skills') || extract_flag!(args, '--skip-skills')
       raw_body = extract_option!(args, '--body')
       @body = raw_body ? JSON.parse(raw_body) : nil
 

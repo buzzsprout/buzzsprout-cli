@@ -29,18 +29,22 @@ module Buzzsprout
       @env_keys = %w[
         BUZZSPROUT_API_TOKEN BUZZSPROUT_PODCAST_ID BUZZSPROUT_CONFIG
         BUZZSPROUT_API_BASE BUZZSPROUT_NO_ANIMATION BUZZSPROUT_THEME
-        BUZZSPROUT_NO_COLOR BUZZSPROUT_NONINTERACTIVE NO_COLOR COLORFGBG CI
+        BUZZSPROUT_NO_COLOR BUZZSPROUT_NONINTERACTIVE BUZZSPROUT_SKILLS_DIR
+        NO_COLOR COLORFGBG CI
       ]
       @saved_env = @env_keys.to_h { |key| [key, ENV[key]] }
       @env_keys.each { |key| ENV.delete(key) }
       ENV['BUZZSPROUT_NO_ANIMATION'] = '1'
       ENV['NO_COLOR'] = '1'
       ENV['CI'] = '1'
+      @skills_dir = Dir.mktmpdir('buzzsprout-skills')
+      ENV['BUZZSPROUT_SKILLS_DIR'] = @skills_dir
       Config.clear_cache
       Color.reset_theme!
     end
 
     def teardown
+      FileUtils.rm_rf(@skills_dir) if @skills_dir
       Config.clear_cache
       Color.reset_theme!
       @saved_env.each do |key, value|

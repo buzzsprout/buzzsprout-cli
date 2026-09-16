@@ -29,6 +29,8 @@ API shapes follow [buzzsprout/buzzsprout-api#56](https://github.com/buzzsprout/b
 
 Skills are markdown. Copy or symlink the folders into the directory your agent already scans.
 
+After a successful `buzzsprout login`, the CLI offers to run the same install when the destination is empty (`Install agent skills now? [Y/n]`, default yes). Use `buzzsprout login --install-skills` to copy without prompting, or `--no-skills` / `--skip-skills` to skip. The prompt is also skipped when skills are already present, `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or stdin is not a TTY. Destination is `--dir`, else `BUZZSPROUT_SKILLS_DIR`, else `~/.cursor/skills`.
+
 ### Cursor
 
 Project-local (preferred for this repo):

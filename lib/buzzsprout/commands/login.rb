@@ -5,18 +5,22 @@ require 'io/console'
 module Buzzsprout
   module Commands
     class Login < Base
-      USAGE = 'buzzsprout login [--no-animation]'
+      USAGE = 'buzzsprout login [--no-animation] [--install-skills|--no-skills]'
       HELP_PAGE = {
         summary: 'Authenticate with a Buzzsprout API token.',
-        usage: 'buzzsprout login [--no-animation]',
+        usage: 'buzzsprout login [--no-animation] [--install-skills|--no-skills]',
         aliases: %w[login auth init],
         flags: [
           ['--token TOKEN', 'Avoid: visible in process list and shell history. Prefer the prompt or BUZZSPROUT_API_TOKEN'],
-          ['--no-animation', 'Skip the intro animation']
+          ['--no-animation', 'Skip the intro animation'],
+          ['--install-skills', 'Install agent skills after login without prompting'],
+          ['--no-skills', 'Skip the skills install prompt (--skip-skills)'],
+          ['--dir PATH', 'Skills install destination (default ~/.cursor/skills)']
         ],
         examples: [
           'buzzsprout login',
-          'buzzsprout login --no-animation'
+          'buzzsprout login --no-animation',
+          'buzzsprout login --install-skills'
         ]
       }.freeze
 
@@ -120,6 +124,7 @@ module Buzzsprout
         else
           pick_default_after_login(list)
         end
+        offer_skills_install
       end
 
       def pick_default_after_login(list)
@@ -155,6 +160,39 @@ module Buzzsprout
       def print_next_steps
         @io.puts 'Try:  buzzsprout podcasts'
         @io.puts '      buzzsprout episodes list'
+      end
+
+      def offer_skills_install
+        return if @options.dry_run?
+
+        dest = Skills.destination_dir(@options.dir)
+        if @options.install_skills?
+          @io.puts ''
+          Skills.install_into!(dest, io: @io)
+          return
+        end
+        return if @options.skip_skills?
+        return if Skills.installed?(dest)
+        return unless interactive_skills_prompt?
+
+        @io.puts ''
+        @io.print 'Install agent skills now? [Y/n] '
+        @io.flush if @io.respond_to?(:flush)
+        answer = @stdin.gets.to_s.strip
+        if %w[n no].include?(answer.downcase)
+          @io.puts 'Skipped. Install later with:  buzzsprout skills install'
+          return
+        end
+
+        Skills.install_into!(dest, io: @io)
+      end
+
+      def interactive_skills_prompt?
+        return false if @options.json?
+        return false if ENV['BUZZSPROUT_NONINTERACTIVE'] == '1'
+        return false unless @stdin.respond_to?(:tty?) && @stdin.tty?
+
+        true
       end
 
       def print_podcast_list(list)

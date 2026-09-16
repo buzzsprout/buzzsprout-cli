@@ -37,4 +37,23 @@ class OptionsTest < Buzzsprout::Test
     options = Buzzsprout::Options.parse!(args)
     assert_equal '10', options.podcast_id
   end
+
+  def test_skills_install_flags
+    args = ['login', '--install-skills', '--dir', '/tmp/skills']
+    options = Buzzsprout::Options.parse!(args)
+    assert options.install_skills?
+    refute options.skip_skills?
+    assert_equal '/tmp/skills', options.dir
+    assert_equal %w[login], args
+
+    args = ['login', '--no-skills']
+    options = Buzzsprout::Options.parse!(args)
+    assert options.skip_skills?
+    refute options.install_skills?
+
+    args = ['login', '--skip-skills', '--dir=~/.cursor/skills']
+    options = Buzzsprout::Options.parse!(args)
+    assert options.skip_skills?
+    assert_equal '~/.cursor/skills', options.dir
+  end
 end

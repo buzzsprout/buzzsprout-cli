@@ -88,11 +88,14 @@ With no config yet, `buzzsprout` (or `buzzsprout login`) will:
    ```
 
 4. On success: a blank line, then **Authentication Successful** in the logo green `#61D752` (`NO_COLOR` / non-TTY: plain text), then **pick a podcast** if you have more than one (arrow keys, type to search, Enter), and save the token to `~/.buzzsprout.json` (mode `0600`)
-5. On failure: print a clear error and offer to retry / re-enter the token
+5. If agent skills are not already installed, offer **Install agent skills now? [Y/n]** (default yes). Skipped when skills are already present, `--no-skills` / `--skip-skills`, `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or no TTY. `buzzsprout login --install-skills` copies them without prompting.
+6. On failure: print a clear error and offer to retry / re-enter the token
 
 ```bash
 buzzsprout login
 buzzsprout login --no-animation
+buzzsprout login --install-skills
+buzzsprout login --no-skills
 ```
 
 Skip the animation with `--no-animation` or `BUZZSPROUT_NO_ANIMATION=1`. Prefer `BUZZSPROUT_API_TOKEN` in the environment over `--token` (process list / history).
@@ -139,7 +142,7 @@ buzzsprout podcast use                # pick a different saved podcast
 
 ## Commands
 
-Global flags: `--json`, `--body '{…}'`, `--file PATH`, `--dry-run`, `--podcast ID` (alias `--in`), `--no-animation`.
+Global flags: `--json`, `--body '{…}'`, `--file PATH`, `--dry-run`, `--podcast ID` (alias `--in`), `--no-animation`, `--install-skills`, `--no-skills`.
 
 ### Podcasts
 
@@ -216,7 +219,7 @@ buzzsprout skills path
 buzzsprout skills install --dir ~/.cursor/skills
 ```
 
-Copy or symlink into whatever directory your agent already loads (`~/.cursor/skills`, `~/.claude/skills`, `.cursor/skills` in a project). Details: [skills/README.md](skills/README.md).
+`buzzsprout login` offers the same install (default `~/.cursor/skills`, or `BUZZSPROUT_SKILLS_DIR` / `--dir`) when those skill folders are missing. Copy or symlink into whatever directory your agent already loads (`~/.cursor/skills`, `~/.claude/skills`, `.cursor/skills` in a project). Details: [skills/README.md](skills/README.md).
 
 ## Environment
 
@@ -224,8 +227,9 @@ Copy or symlink into whatever directory your agent already loads (`~/.cursor/ski
 | --- | --- |
 | `BUZZSPROUT_API_TOKEN` | Token override (never print) |
 | `BUZZSPROUT_PODCAST_ID` | Explicit podcast id for this process (skips the picker) |
-| `BUZZSPROUT_NONINTERACTIVE=1` | Never open the podcast picker |
+| `BUZZSPROUT_NONINTERACTIVE=1` | Never open the podcast picker or the post-login skills prompt |
 | `BUZZSPROUT_CONFIG` | Config path (default `~/.buzzsprout.json`) |
+| `BUZZSPROUT_SKILLS_DIR` | Skills install destination (default `~/.cursor/skills`) |
 | `BUZZSPROUT_API_BASE` | API base (default `https://www.buzzsprout.com/api`) |
 | `BUZZSPROUT_NO_ANIMATION=1` | Skip the intro |
 | `BUZZSPROUT_THEME` | `dark` or `light` for the intro. If unset: `COLORFGBG`, then a best-effort OSC 11 query **only** on a raw TTY (skipped if that would leak). Otherwise **dark** (bright green `#61D752` for bolt + wordmark). Light terminals use `#214538` for the wordmark. |

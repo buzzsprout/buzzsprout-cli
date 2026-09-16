@@ -82,6 +82,10 @@ class CLITest < Buzzsprout::Test
       status, out, = run_cli(['--help'])
     assert_equal 0, status
     assert_match(/login, auth, init/, out)
+    assert_match(/may offer to install agent skills/, out)
+    assert_match(/--install-skills/, out)
+    assert_match(/--no-skills/, out)
+    assert_match(/BUZZSPROUT_SKILLS_DIR/, out)
     assert_match(/podcast use/, out)
     assert_match(/episode <id> downloads today\|yesterday\|YYYY-MM-DD/, out)
     assert_match(/downloads today\|yesterday\|YYYY-MM-DD/, out)
@@ -305,6 +309,9 @@ class CLITest < Buzzsprout::Test
         refute_match(/super-secret-token/, out)
         refute_match(/You're in/, out)
         refute_match(/authentication successful!/i, out)
+        refute_match(/Install agent skills now/, out)
+        refute_match(/Installed \d+ skills/, out)
+        refute skills_present?
 
         request = api.requests.first
         assert_equal 'GET', request[:method]
@@ -678,11 +685,12 @@ class CLITest < Buzzsprout::Test
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
-        status, out, err = run_cli(['login', '--no-animation'], tty: true, stdin_data: "super-secret-token\n\e[B\r")
+        status, out, err = run_cli(['login', '--no-animation', '--no-skills'], tty: true, stdin_data: "super-secret-token\n\e[B\r")
         assert_equal 0, status, err
         assert_match(/\n\nAuthentication Successful\n/, out)
         assert_match(/Select a podcast/, out)
         assert_match(/Default podcast set to 20/, out)
+        refute_match(/Install agent skills now/, out)
         saved = JSON.parse(File.read(path), symbolize_names: true)
         assert_equal 'super-secret-token', saved[:api_token]
         assert_equal 20, saved[:default_podcast_id]
@@ -690,6 +698,200 @@ class CLITest < Buzzsprout::Test
         api.shutdown
       end
     end
+  end
+
+  def test_login_help_mentions_skills_flags
+    status, out, err = run_cli(['login', '--help'])
+    assert_equal 0, status, err
+    assert_match(/--install-skills/, out)
+    assert_match(/--no-skills/, out)
+    assert_match(/--dir PATH/, out)
+  end
+
+  def test_login_offers_skills_install_when_absent
+    with_config do
+      api = FakeApi.new(
+        '/api/podcasts' => { status: 200, body: [{ id: 10, title: 'Life Empowerment' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(
+          ['login', '--no-animation'],
+          tty: true,
+          stdin_data: "super-secret-token\n\n"
+        )
+        assert_equal 0, status, err
+        assert_match(/Install agent skills now\? \[Y\/n\]/, out)
+        assert_match(/Installed \d+ skills into #{Regexp.escape(@skills_dir)}/, out)
+        assert skills_present?
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_login_skills_prompt_yes_installs
+    with_config do
+      api = FakeApi.new(
+        '/api/podcasts' => { status: 200, body: [{ id: 10, title: 'Life Empowerment' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(
+          ['login', '--no-animation', '--token', 'ok'],
+          tty: true,
+          stdin_data: "y\n"
+        )
+        assert_equal 0, status, err
+        assert_match(/Install agent skills now/, out)
+        assert_match(/Installed \d+ skills/, out)
+        assert skills_present?
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_login_skills_prompt_no_skips_install
+    with_config do
+      api = FakeApi.new(
+        '/api/podcasts' => { status: 200, body: [{ id: 10, title: 'Life Empowerment' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(
+          ['login', '--no-animation', '--token', 'ok'],
+          tty: true,
+          stdin_data: "n\n"
+        )
+        assert_equal 0, status, err
+        assert_match(/Install agent skills now/, out)
+        assert_match(/Skipped\. Install later with:  buzzsprout skills install/, out)
+        refute_match(/Installed \d+ skills/, out)
+        refute skills_present?
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_login_skips_skills_prompt_when_already_installed
+    Buzzsprout::Commands::Skills.install_into!(@skills_dir, io: StringIO.new)
+    with_config do
+      api = FakeApi.new(
+        '/api/podcasts' => { status: 200, body: [{ id: 10, title: 'Life Empowerment' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(
+          ['login', '--no-animation', '--token', 'ok'],
+          tty: true,
+          stdin_data: "n\n"
+        )
+        assert_equal 0, status, err
+        refute_match(/Install agent skills now/, out)
+        refute_match(/Installed \d+ skills/, out)
+        assert skills_present?
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_login_noninteractive_skips_skills_prompt
+    ENV['BUZZSPROUT_NONINTERACTIVE'] = '1'
+    with_config do
+      api = FakeApi.new(
+        '/api/podcasts' => { status: 200, body: [{ id: 10, title: 'Life Empowerment' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(
+          ['login', '--no-animation', '--token', 'ok'],
+          tty: true,
+          stdin_data: "\n"
+        )
+        assert_equal 0, status, err
+        refute_match(/Install agent skills now/, out)
+        refute_match(/Installed \d+ skills/, out)
+        refute skills_present?
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_login_json_skips_skills_prompt
+    with_config do
+      api = FakeApi.new(
+        '/api/podcasts' => { status: 200, body: [{ id: 10, title: 'Life Empowerment' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(
+          ['login', '--no-animation', '--json', '--token', 'ok'],
+          tty: true,
+          stdin_data: "\n"
+        )
+        assert_equal 0, status, err
+        refute_match(/Install agent skills now/, out)
+        refute skills_present?
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_login_no_skills_flag_skips_prompt
+    with_config do
+      api = FakeApi.new(
+        '/api/podcasts' => { status: 200, body: [{ id: 10, title: 'Life Empowerment' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(
+          ['login', '--no-animation', '--no-skills', '--token', 'ok'],
+          tty: true,
+          stdin_data: "y\n"
+        )
+        assert_equal 0, status, err
+        refute_match(/Install agent skills now/, out)
+        refute_match(/Installed \d+ skills/, out)
+        refute skills_present?
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_login_install_skills_flag_installs_without_prompt
+    dest = File.join(@skills_dir, 'forced')
+    with_config do
+      api = FakeApi.new(
+        '/api/podcasts' => { status: 200, body: [{ id: 10, title: 'Life Empowerment' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(
+          ['login', '--no-animation', '--install-skills', '--dir', dest, '--token', 'ok']
+        )
+        assert_equal 0, status, err
+        refute_match(/Install agent skills now/, out)
+        assert_match(/Installed \d+ skills into #{Regexp.escape(dest)}/, out)
+        assert skills_present?(dest)
+        refute skills_present?
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_skills_install_copies_into_dir
+    dest = File.join(@skills_dir, 'custom')
+    status, out, err = run_cli(['skills', 'install', '--dir', dest])
+    assert_equal 0, status, err
+    assert_match(/Installed \d+ skills into #{Regexp.escape(dest)}/, out)
+    assert skills_present?(dest)
   end
 
   def test_dry_run_create_episode
@@ -870,5 +1072,12 @@ class CLITest < Buzzsprout::Test
     %w[podcasts episodes uploads stats team contributors brand_affiliations chapters transcripts listings podrolls feed_verifications fan_mail insertion_points soundbites buzzsprout].each do |name|
       assert_match(/#{name}/, out)
     end
+  end
+
+  private
+
+  def skills_present?(dir = @skills_dir)
+    File.file?(File.join(dir, 'buzzsprout', 'SKILL.md')) &&
+      File.file?(File.join(dir, 'podcasts', 'SKILL.md'))
   end
 end

@@ -24,5 +24,23 @@ class SkillsContentTest < Buzzsprout::Test
     assert_match(/Never read `~\/\.buzzsprout\.json`/, overview)
     assert_match(/Never print, echo, or interpolate `BUZZSPROUT_API_TOKEN`/, overview)
     refute_match(/login --token "\$BUZZSPROUT_API_TOKEN"/, overview)
+    assert_match(/login --install-skills/, overview)
+    assert_match(/offer to install these skills/, overview)
+  end
+
+  def test_installed_is_false_until_every_skill_is_copied
+    dest = File.join(@skills_dir, 'partial')
+    refute Buzzsprout::Commands::Skills.installed?(dest)
+
+    FileUtils.mkdir_p(File.join(dest, 'podcasts'))
+    File.write(File.join(dest, 'podcasts', 'SKILL.md'), '# partial')
+    refute Buzzsprout::Commands::Skills.installed?(dest)
+
+    io = StringIO.new
+    copied = Buzzsprout::Commands::Skills.install_into!(dest, io: io)
+    assert Buzzsprout::Commands::Skills.installed?(dest)
+    refute_empty copied
+    assert_match(/Installed #{copied.size} skills into #{dest}/, io.string)
+    assert File.file?(File.join(dest, 'buzzsprout', 'SKILL.md'))
   end
 end
