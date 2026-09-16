@@ -64,8 +64,9 @@ module Buzzsprout
     end
 
     # :dark or :light. Override with BUZZSPROUT_THEME=dark|light.
-    # Otherwise COLORFGBG, then an OSC 11 query on a TTY, then dark (readable
-    # bright green). Skips OSC when CI=1 so tests and bots do not block.
+    # Otherwise COLORFGBG, then a best-effort OSC 11 query (raw TTY only),
+    # then dark. OSC is skipped in CI and whenever it cannot be done without
+    # leaking the reply as visible text.
     def theme(io = $stdout)
       @theme_cache ||= {}
       key = "#{ENV['BUZZSPROUT_THEME']}|#{ENV['COLORFGBG']}|#{io.object_id}"
@@ -107,33 +108,87 @@ module Buzzsprout
       luma > 0.5 ? :light : :dark
     end
 
-    def probe_osc11(io = $stdout)
-      return nil if ENV['CI']
-      return nil unless io.respond_to?(:tty?) && io.tty?
-      return nil unless File.exist?('/dev/tty')
+    # Query the terminal background via OSC 11. Writes/reads only on +tty+
+    # (never the UI stream). Requires raw/no-echo so the reply is not echoed.
+    # Pass +tty:+ in tests. Returns nil if the probe cannot be done safely.
+    def probe_osc11(ui_io = $stdout, tty: nil)
+      injected = !tty.nil?
+      return nil if ENV['CI'] && !injected
 
-      File.open('/dev/tty', 'r+') do |tty|
-        tty.write "\e]11;?\e\\"
-        tty.flush
-        buf = +''
-        deadline = now + 0.08
-        loop do
-          left = deadline - now
-          break if left <= 0
+      tty ||= osc_console
+      return nil unless osc_tty?(tty)
+      return nil if tty.equal?(ui_io)
 
-          ready, = IO.select([tty], nil, nil, left)
-          break unless ready
-
-          buf << tty.read_nonblock(256)
-          break if buf.include?("\a") || buf.include?("\e\\")
-        end
-        parse_osc11(buf)
+      reply = +''
+      tty.raw do
+        tty.write "\e]11;?\a"
+        tty.flush if tty.respond_to?(:flush)
+        reply = read_osc_reply(tty, timeout: 0.05)
+        drain_tty(tty)
       end
+      parse_osc11(reply)
     rescue Errno::ENXIO, Errno::ENOTTY, Errno::ENOENT, Errno::EAGAIN, Errno::EWOULDBLOCK, EOFError, IOError, ArgumentError
       nil
     end
 
-    def now
+    def osc_console
+      require 'io/console'
+      console = IO.console
+      return nil unless console
+      return nil unless console.respond_to?(:raw)
+      return nil unless $stdin.respond_to?(:tty?) && $stdin.tty?
+
+      console
+    rescue LoadError
+      nil
+    end
+
+    def osc_tty?(tty)
+      tty &&
+        tty.respond_to?(:tty?) && tty.tty? &&
+        tty.respond_to?(:raw) &&
+        tty.respond_to?(:write) &&
+        tty.respond_to?(:read_nonblock)
+    end
+
+    def read_osc_reply(tty, timeout:)
+      buf = +''
+      deadline = monotonic + timeout
+      loop do
+        left = deadline - monotonic
+        break if left <= 0
+
+        chunk = read_tty_chunk(tty, left)
+        break if chunk.nil?
+
+        buf << chunk
+        break if osc_reply_complete?(buf)
+      end
+      buf
+    end
+
+    def osc_reply_complete?(buf)
+      buf.include?("\a") || buf.include?("\e\\")
+    end
+
+    def read_tty_chunk(tty, wait)
+      tty.read_nonblock(256)
+    rescue Errno::EAGAIN, Errno::EWOULDBLOCK, IO::WaitReadable
+      return nil unless tty.respond_to?(:to_io) && tty.to_io
+
+      ready, = IO.select([tty], nil, nil, wait)
+      return nil unless ready
+
+      retry
+    end
+
+    def drain_tty(tty)
+      loop { tty.read_nonblock(4096) }
+    rescue Errno::EAGAIN, Errno::EWOULDBLOCK, EOFError, IO::WaitReadable
+      nil
+    end
+
+    def monotonic
       Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
   end

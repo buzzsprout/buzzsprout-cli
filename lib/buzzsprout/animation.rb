@@ -15,6 +15,8 @@ module Buzzsprout
     def play
       return if skip?
 
+      Color.theme(@io)
+
       hide = "\e[?25l"
       show = "\e[?25h"
       @io.print hide

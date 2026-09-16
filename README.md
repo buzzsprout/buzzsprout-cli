@@ -191,7 +191,7 @@ Copy or symlink into whatever directory your agent already loads (`~/.cursor/ski
 | `BUZZSPROUT_CONFIG` | Config path (default `~/.buzzsprout.json`) |
 | `BUZZSPROUT_API_BASE` | API base (default `https://www.buzzsprout.com/api`) |
 | `BUZZSPROUT_NO_ANIMATION=1` | Skip the intro |
-| `BUZZSPROUT_THEME` | `dark` or `light` for the intro. If unset: `COLORFGBG`, then OSC 11 on a TTY, otherwise **dark** (bright green `#61D752` for bolt + wordmark). Light terminals use `#214538` for the wordmark. |
+| `BUZZSPROUT_THEME` | `dark` or `light` for the intro. If unset: `COLORFGBG`, then a best-effort OSC 11 query **only** on a raw TTY (skipped if that would leak). Otherwise **dark** (bright green `#61D752` for bolt + wordmark). Light terminals use `#214538` for the wordmark. |
 | `NO_COLOR` / `BUZZSPROUT_NO_COLOR` | Disable ANSI color |
 
 ## Development
