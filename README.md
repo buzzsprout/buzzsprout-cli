@@ -87,7 +87,7 @@ With no config yet, `buzzsprout` (or `buzzsprout login`) will:
    Accept: application/json
    ```
 
-4. On success: celebrate, list your podcasts, save the token to `~/.buzzsprout.json` (mode `0600`)
+4. On success: a short ASCII confetti burst (TTY only), then celebrate, list your podcasts, and save the token to `~/.buzzsprout.json` (mode `0600`)
 5. On failure: print a clear error and offer to retry / re-enter the token
 
 ```bash
