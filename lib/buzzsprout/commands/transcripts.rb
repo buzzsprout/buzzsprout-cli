@@ -3,10 +3,27 @@
 module Buzzsprout
   module Commands
     class Transcripts < Base
-      USAGE = 'buzzsprout transcripts <show|upload|delete|high-fidelity|replace-high-fidelity> <podcast_id> <episode_id>'
+      USAGE = 'buzzsprout transcripts <command> [flags]'
+      HELP_WHEN_BARE = true
+      HELP_PAGE = {
+        summary: 'Show, upload, or replace episode transcripts.',
+        usage: 'buzzsprout transcripts <command> <episode_id>',
+        aliases: %w[transcripts],
+        commands: [
+          ['show', 'Show the custom transcript'],
+          ['upload', 'Upload a custom transcript (--file)'],
+          ['delete', 'Delete the custom transcript'],
+          ['high-fidelity', 'Show the high-fidelity transcript'],
+          ['replace-high-fidelity', 'Replace high-fidelity segments (--body)']
+        ],
+        examples: [
+          'buzzsprout transcripts show 788881',
+          'buzzsprout transcripts upload 788881 --file ./show.srt'
+        ]
+      }.freeze
 
       def run
-        verb = @args.shift || 'show'
+        verb = @args.shift
         case verb
         when 'show' then show
         when 'upload', 'create' then upload
@@ -14,7 +31,7 @@ module Buzzsprout
         when 'high-fidelity', 'hf' then high_fidelity
         when 'replace-high-fidelity', 'replace-hf' then replace_high_fidelity
         else
-          raise USAGE
+          group_help
         end
       end
 

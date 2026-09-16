@@ -3,7 +3,25 @@
 module Buzzsprout
   module Commands
     class Episodes < Base
-      USAGE = 'buzzsprout episodes <list|show|create|update|publish|unpublish> <podcast_id> [episode_id]'
+      USAGE = 'buzzsprout episodes [command] [flags]'
+      HELP_PAGE = {
+        summary: 'List and manage episodes for the current podcast.',
+        usage: 'buzzsprout episodes <command> [podcast_id] [episode_id]',
+        aliases: %w[episodes episode],
+        commands: [
+          ['list', 'List episodes (default)'],
+          ['show', 'Show one episode'],
+          ['create', 'Create an episode (--title)'],
+          ['update', 'Update episode fields'],
+          ['publish', 'Publish an episode'],
+          ['unpublish', 'Unpublish (set private)']
+        ],
+        examples: [
+          'buzzsprout episodes list',
+          'buzzsprout episodes show 10 788881',
+          'buzzsprout episodes create --title "Pilot" --private'
+        ]
+      }.freeze
 
       def run
         verb = @args.shift
@@ -28,7 +46,7 @@ module Buzzsprout
             list
           end
         else
-          raise USAGE
+          group_help
         end
       end
 

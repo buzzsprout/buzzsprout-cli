@@ -3,7 +3,25 @@
 module Buzzsprout
   module Commands
     class Contributors < Base
-      USAGE = 'buzzsprout contributors <list|show|create|update|delete|assign|unassign> <podcast_id> [id]'
+      USAGE = 'buzzsprout contributors [command] [flags]'
+      HELP_PAGE = {
+        summary: 'Manage podcast contributors.',
+        usage: 'buzzsprout contributors <command> [id]',
+        aliases: %w[contributors],
+        commands: [
+          ['list', 'List contributors (default)'],
+          ['show', 'Show one contributor'],
+          ['create', 'Create a contributor (--name)'],
+          ['update', 'Update a contributor'],
+          ['delete', 'Delete a contributor'],
+          ['assign', 'Assign a contributor to an episode'],
+          ['unassign', 'Unassign a contributor from an episode']
+        ],
+        examples: [
+          'buzzsprout contributors',
+          'buzzsprout contributors create --name "Jane Doe" --role host'
+        ]
+      }.freeze
 
       def run
         dispatch(%w[list show create update delete assign unassign])
@@ -13,7 +31,7 @@ module Buzzsprout
 
       def dispatch(verbs)
         verb = @args.shift || 'list'
-        raise USAGE unless verbs.include?(verb)
+        return group_help unless verbs.include?(verb)
 
         send(verb)
       end

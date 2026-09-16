@@ -3,7 +3,24 @@
 module Buzzsprout
   module Commands
     class FanMail < Base
-      USAGE = 'buzzsprout fan-mail <list|show|publish|unpublish|read|block> <podcast_id> [id]'
+      USAGE = 'buzzsprout fan-mail [command] [flags]'
+      HELP_PAGE = {
+        summary: 'Read and moderate podcast fan mail.',
+        usage: 'buzzsprout fan-mail <command> [id]',
+        aliases: %w[fan-mail fan_mail],
+        commands: [
+          ['list', 'List fan mail (default)'],
+          ['show', 'Show one message'],
+          ['publish', 'Publish a message'],
+          ['unpublish', 'Unpublish a message'],
+          ['read', 'Mark a message as read'],
+          ['block', 'Block the sender']
+        ],
+        examples: [
+          'buzzsprout fan-mail',
+          'buzzsprout fan-mail publish 42'
+        ]
+      }.freeze
 
       def run
         verb = @args.shift || 'list'
@@ -15,7 +32,7 @@ module Buzzsprout
         when 'read' then read
         when 'block' then block
         else
-          raise USAGE
+          group_help
         end
       end
 
@@ -67,17 +84,33 @@ module Buzzsprout
     end
 
     class InsertionPoints < Base
-      USAGE = 'buzzsprout insertion-points <list|create|update|delete> <podcast_id> <episode_id> [id]'
+      USAGE = 'buzzsprout insertion-points <command> [flags]'
+      HELP_WHEN_BARE = true
+      HELP_PAGE = {
+        summary: 'Manage dynamic insertion points on an episode.',
+        usage: 'buzzsprout insertion-points <command> <episode_id> [id]',
+        aliases: %w[insertion-points insertion_points],
+        commands: [
+          ['list', 'List insertion points'],
+          ['create', 'Create one (--timestamp or --seconds)'],
+          ['update', 'Update an insertion point'],
+          ['delete', 'Delete an insertion point']
+        ],
+        examples: [
+          'buzzsprout insertion-points list 788881',
+          'buzzsprout insertion-points create 788881 --seconds 30'
+        ]
+      }.freeze
 
       def run
-        verb = @args.shift || 'list'
+        verb = @args.shift
         case verb
         when 'list' then list
         when 'create' then create
         when 'update' then update
         when 'delete' then delete
         else
-          raise USAGE
+          group_help
         end
       end
 
@@ -125,16 +158,31 @@ module Buzzsprout
     end
 
     class Soundbites < Base
-      USAGE = 'buzzsprout soundbites <show|create|delete> <podcast_id> <episode_id>'
+      USAGE = 'buzzsprout soundbites <command> [flags]'
+      HELP_WHEN_BARE = true
+      HELP_PAGE = {
+        summary: 'Create or inspect an episode soundbite.',
+        usage: 'buzzsprout soundbites <command> <episode_id>',
+        aliases: %w[soundbites soundbite],
+        commands: [
+          ['show', 'Show the soundbite'],
+          ['create', 'Create a soundbite'],
+          ['delete', 'Delete the soundbite']
+        ],
+        examples: [
+          'buzzsprout soundbites show 788881',
+          'buzzsprout soundbites create 788881 --start-time 00:01:00 --duration 30'
+        ]
+      }.freeze
 
       def run
-        verb = @args.shift || 'show'
+        verb = @args.shift
         case verb
         when 'show' then show
         when 'create' then create
         when 'delete' then delete
         else
-          raise USAGE
+          group_help
         end
       end
 

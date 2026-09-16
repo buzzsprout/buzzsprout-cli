@@ -3,7 +3,22 @@
 module Buzzsprout
   module Commands
     class Team < Base
-      USAGE = 'buzzsprout team <list|invite|update|delete> <podcast_id> [id]'
+      USAGE = 'buzzsprout team [command] [flags]'
+      HELP_PAGE = {
+        summary: 'Manage podcast team members.',
+        usage: 'buzzsprout team <command> [id]',
+        aliases: %w[team],
+        commands: [
+          ['list', 'List team members (default)'],
+          ['invite', 'Invite a member (--email, --role)'],
+          ['update', 'Update a team member'],
+          ['delete', 'Remove a team member']
+        ],
+        examples: [
+          'buzzsprout team',
+          'buzzsprout team invite --email editor@example.com --role editor'
+        ]
+      }.freeze
 
       def run
         verb = @args.shift || 'list'
@@ -13,7 +28,7 @@ module Buzzsprout
         when 'update' then update
         when 'delete', 'remove' then delete_member
         else
-          raise USAGE
+          group_help
         end
       end
 

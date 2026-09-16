@@ -4,6 +4,12 @@ module Buzzsprout
   module Commands
     class Logout < Base
       USAGE = 'buzzsprout logout'
+      HELP_PAGE = {
+        summary: 'Remove the saved token and default podcast.',
+        usage: 'buzzsprout logout',
+        aliases: %w[logout],
+        examples: ['buzzsprout logout']
+      }.freeze
 
       def run
         Config.delete!
@@ -14,6 +20,12 @@ module Buzzsprout
 
     class Status < Base
       USAGE = 'buzzsprout status'
+      HELP_PAGE = {
+        summary: 'Show whether a token and default podcast are saved.',
+        usage: 'buzzsprout status',
+        aliases: %w[status whoami],
+        examples: ['buzzsprout status']
+      }.freeze
 
       def run
         if Config.configured?

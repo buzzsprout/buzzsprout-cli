@@ -2,10 +2,24 @@
 
 require 'uri'
 require_relative '../podcast_picker'
+require_relative '../group_help'
 
 module Buzzsprout
   module Commands
+    module GroupHelpHook
+      def run
+        return group_help if take_help_flag! || show_bare_help?
+
+        super
+      end
+    end
+
     class Base
+      def self.inherited(klass)
+        super
+        klass.prepend(GroupHelpHook)
+      end
+
       def initialize(args, options, io: $stdout, err: $stderr, stdin: $stdin)
         @args = args
         @options = options
@@ -16,6 +30,39 @@ module Buzzsprout
       end
 
       private
+
+      def take_help_flag!
+        removed = false
+        @args.delete_if do |arg|
+          next false unless %w[-h --help].include?(arg)
+
+          removed = true
+          true
+        end
+        removed
+      end
+
+      def show_bare_help?
+        return false unless self.class.const_defined?(:HELP_WHEN_BARE) && self.class::HELP_WHEN_BARE
+
+        incomplete?
+      end
+
+      def incomplete?
+        @args.empty?
+      end
+
+      def group_help
+        GroupHelp.print(help_page, io: @io)
+        0
+      end
+
+      def help_page
+        page = self.class.const_defined?(:HELP_PAGE) ? self.class::HELP_PAGE.dup : {}
+        page[:usage] ||= usage_line
+        page[:name] ||= usage_line.to_s.split[1]
+        page
+      end
 
       def client
         @client ||= Client.new(

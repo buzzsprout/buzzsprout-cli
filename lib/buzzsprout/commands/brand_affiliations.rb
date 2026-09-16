@@ -3,11 +3,29 @@
 module Buzzsprout
   module Commands
     class BrandAffiliations < Base
-      USAGE = 'buzzsprout brand-affiliations <list|show|create|update|delete|assign|unassign> <podcast_id> [id]'
+      USAGE = 'buzzsprout brand-affiliations [command] [flags]'
+      HELP_PAGE = {
+        summary: 'Manage brand affiliations for a podcast.',
+        usage: 'buzzsprout brand-affiliations <command> [id]',
+        aliases: %w[brand-affiliations brand_affiliations brands],
+        commands: [
+          ['list', 'List affiliations (default)'],
+          ['show', 'Show one affiliation'],
+          ['create', 'Create an affiliation (--headline)'],
+          ['update', 'Update an affiliation'],
+          ['delete', 'Delete an affiliation'],
+          ['assign', 'Assign an affiliation to an episode'],
+          ['unassign', 'Unassign an affiliation from an episode']
+        ],
+        examples: [
+          'buzzsprout brand-affiliations',
+          'buzzsprout brand-affiliations create --headline "Sponsor"'
+        ]
+      }.freeze
 
       def run
         verb = @args.shift || 'list'
-        raise USAGE unless %w[list show create update delete assign unassign].include?(verb)
+        return group_help unless %w[list show create update delete assign unassign].include?(verb)
 
         send(verb)
       end

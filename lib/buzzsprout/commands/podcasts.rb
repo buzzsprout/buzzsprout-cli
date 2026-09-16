@@ -3,7 +3,24 @@
 module Buzzsprout
   module Commands
     class Podcasts < Base
-      USAGE = 'buzzsprout podcasts [list|show <id>|update <id>|use [id]]'
+      USAGE = 'buzzsprout podcasts [command] [flags]'
+      HELP_PAGE = {
+        summary: 'List, show, update, and select Buzzsprout podcasts.',
+        usage: 'buzzsprout podcasts <command> [flags]',
+        aliases: %w[podcasts podcast],
+        commands: [
+          ['list', 'List podcasts (default)'],
+          ['show <id>', 'Show podcast details'],
+          ['update <id>', 'Update podcast metadata'],
+          ['use [id]', 'Save a default podcast (picker if omitted)']
+        ],
+        examples: [
+          'buzzsprout podcasts',
+          'buzzsprout podcast use',
+          'buzzsprout podcast use 10',
+          'buzzsprout podcasts show 10'
+        ]
+      }.freeze
 
       def run
         verb, *rest = @args
@@ -23,7 +40,7 @@ module Buzzsprout
           @args.unshift(verb)
           show
         else
-          raise USAGE
+          group_help
         end
       end
 

@@ -95,6 +95,59 @@ class CLITest < Buzzsprout::Test
     assert_match(/Usage/, out)
   end
 
+  def test_stats_without_args_prints_group_help
+    status, out, err = run_cli(['stats'])
+    assert_equal 0, status, err
+    assert_match(/USAGE/, out)
+    assert_match(/COMMANDS/, out)
+    assert_match(/ALIASES/, out)
+    assert_match(/INHERITED FLAGS/, out)
+    assert_match(/EXAMPLES/, out)
+    assert_match(/LEARN MORE/, out)
+    assert_match(/episode/, out)
+    assert_match(/--date YYYY-MM-DD/, out)
+    refute_match(/Error:/, err)
+    refute_match(/date is required/, err)
+  end
+
+  def test_stats_help_flag_prints_group_help
+    status, out, err = run_cli(['stats', '--help'])
+    assert_equal 0, status, err
+    assert_match(/USAGE/, out)
+    refute_match(/Error:/, err)
+  end
+
+  def test_uploads_without_args_prints_group_help
+    status, out, err = run_cli(['uploads'])
+    assert_equal 0, status, err
+    assert_match(/USAGE/, out)
+    assert_match(/start/, out)
+    refute_match(/Error:/, err)
+  end
+
+  def test_chapters_without_args_prints_group_help
+    status, out, err = run_cli(['chapters'])
+    assert_equal 0, status, err
+    assert_match(/USAGE/, out)
+    assert_match(/replace/, out)
+    refute_match(/Error:/, err)
+  end
+
+  def test_unknown_subcommand_prints_group_help
+    status, out, err = run_cli(['episodes', 'nope'])
+    assert_equal 0, status, err
+    assert_match(/USAGE/, out)
+    assert_match(/COMMANDS/, out)
+    refute_match(/Error:/, err)
+  end
+
+  def test_podcasts_help_flag_does_not_require_auth
+    status, out, err = run_cli(['podcasts', '--help'])
+    assert_equal 0, status, err
+    assert_match(/podcast use/, out)
+    refute_match(/Not authenticated/, err)
+  end
+
   def test_top_level_use_is_unknown
     status, _, err = run_cli(['use', '10'])
     assert_equal 1, status

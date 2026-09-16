@@ -6,6 +6,19 @@ module Buzzsprout
   module Commands
     class Login < Base
       USAGE = 'buzzsprout login [--token TOKEN] [--no-animation]'
+      HELP_PAGE = {
+        summary: 'Authenticate with a Buzzsprout API token.',
+        usage: 'buzzsprout login [--token TOKEN] [--no-animation]',
+        aliases: %w[login auth init],
+        flags: [
+          ['--token TOKEN', 'Token (otherwise prompted)'],
+          ['--no-animation', 'Skip the intro animation']
+        ],
+        examples: [
+          'buzzsprout login',
+          'buzzsprout login --token "$BUZZSPROUT_API_TOKEN" --no-animation'
+        ]
+      }.freeze
 
       def run
         play_intro

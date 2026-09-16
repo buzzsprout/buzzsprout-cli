@@ -3,7 +3,25 @@
 module Buzzsprout
   module Commands
     class Uploads < Base
-      USAGE = 'buzzsprout uploads <start|complete|abort> <podcast_id> <episode_id> [--file PATH]'
+      USAGE = 'buzzsprout uploads <command> [flags]'
+      HELP_WHEN_BARE = true
+      HELP_PAGE = {
+        summary: 'Upload audio or video for an episode.',
+        usage: 'buzzsprout uploads <command> <episode_id> [upload_id]',
+        aliases: %w[uploads upload],
+        commands: [
+          ['start', 'Start an upload (--file PATH)'],
+          ['complete', 'Mark an upload complete'],
+          ['abort', 'Abort an in-progress upload']
+        ],
+        flags: [
+          ['--file PATH', 'Local media file (start)']
+        ],
+        examples: [
+          'buzzsprout uploads start 788881 --file ./episode.m4a',
+          'buzzsprout uploads complete 788881 UPLOAD_ID'
+        ]
+      }.freeze
 
       MIME = {
         'mp3' => 'audio/mpeg',
@@ -19,7 +37,7 @@ module Buzzsprout
       }.freeze
 
       def run
-        verb = @args.shift || 'start'
+        verb = @args.shift
         case verb
         when 'start', 'upload'
           start
@@ -28,7 +46,7 @@ module Buzzsprout
         when 'abort'
           abort_upload
         else
-          raise USAGE
+          group_help
         end
       end
 

@@ -5,7 +5,24 @@ require 'fileutils'
 module Buzzsprout
   module Commands
     class Skills < Base
-      USAGE = 'buzzsprout skills [list|path|install [--dir DIR]]'
+      USAGE = 'buzzsprout skills [command] [flags]'
+      HELP_PAGE = {
+        summary: 'Install and list agent skills shipped with the CLI.',
+        usage: 'buzzsprout skills <command> [flags]',
+        aliases: %w[skills],
+        commands: [
+          ['list', 'List bundled skills (default)'],
+          ['path', 'Print the skills directory'],
+          ['install', 'Copy skills into a local directory']
+        ],
+        flags: [
+          ['--dir PATH', 'Install destination (default ~/.cursor/skills)']
+        ],
+        examples: [
+          'buzzsprout skills',
+          'buzzsprout skills install --dir ~/.cursor/skills'
+        ]
+      }.freeze
 
       def run
         verb = @args.shift || 'list'
@@ -14,7 +31,7 @@ module Buzzsprout
         when 'path' then path
         when 'install' then install
         else
-          raise USAGE
+          group_help
         end
       end
 

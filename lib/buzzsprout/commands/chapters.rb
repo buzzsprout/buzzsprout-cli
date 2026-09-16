@@ -3,15 +3,29 @@
 module Buzzsprout
   module Commands
     class Chapters < Base
-      USAGE = 'buzzsprout chapters <list|replace> <podcast_id> <episode_id> [--body JSON]'
+      USAGE = 'buzzsprout chapters <command> [flags]'
+      HELP_WHEN_BARE = true
+      HELP_PAGE = {
+        summary: 'List or replace episode chapters.',
+        usage: 'buzzsprout chapters <command> <episode_id>',
+        aliases: %w[chapters],
+        commands: [
+          ['list', 'List chapters'],
+          ['replace', 'Replace chapters (--body JSON)']
+        ],
+        examples: [
+          'buzzsprout chapters list 788881',
+          'buzzsprout chapters replace 788881 --body \'[{"title":"Intro","start_time":"00:00:00"}]\''
+        ]
+      }.freeze
 
       def run
-        verb = @args.shift || 'list'
+        verb = @args.shift
         case verb
         when 'list' then list
         when 'replace', 'update' then replace
         else
-          raise USAGE
+          group_help
         end
       end
 

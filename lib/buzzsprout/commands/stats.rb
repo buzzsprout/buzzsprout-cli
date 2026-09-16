@@ -3,7 +3,28 @@
 module Buzzsprout
   module Commands
     class Stats < Base
-      USAGE = 'buzzsprout stats <podcast_id> [--date YYYY-MM-DD]  |  buzzsprout stats episode <podcast_id> <episode_id> --date YYYY-MM-DD'
+      USAGE = 'buzzsprout stats [command] [flags]'
+      HELP_WHEN_BARE = true
+      HELP_PAGE = {
+        summary: 'Show download stats for a podcast or episode.',
+        usage: [
+          'buzzsprout stats --date YYYY-MM-DD',
+          'buzzsprout stats episode <episode_id> --date YYYY-MM-DD'
+        ],
+        aliases: %w[stats downloads],
+        commands: [
+          ['episode', 'Per-listener downloads for one episode']
+        ],
+        flags: [
+          ['--date YYYY-MM-DD', 'Day to report (required)'],
+          ['--page N', 'Page of episode downloads'],
+          ['--per-page N', 'Page size of episode downloads']
+        ],
+        examples: [
+          'buzzsprout stats --date 2026-09-16',
+          'buzzsprout stats episode 788881 --date 2026-09-16'
+        ]
+      }.freeze
 
       def run
         if @args[0] == 'episode'
@@ -15,6 +36,10 @@ module Buzzsprout
       end
 
       private
+
+      def incomplete?
+        @options.fields['date'].to_s.empty?
+      end
 
       def podcast
         podcast_id = podcast_id_from_args!

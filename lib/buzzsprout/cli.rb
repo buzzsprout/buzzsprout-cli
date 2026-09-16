@@ -50,8 +50,8 @@ module Buzzsprout
         uploads complete|abort <podcast_id> <episode_id> <upload_id>
 
       More resources
-        stats <podcast_id> --date YYYY-MM-DD
-        stats episode <podcast_id> <episode_id> --date YYYY-MM-DD
+        stats --date YYYY-MM-DD
+        stats episode <episode_id> --date YYYY-MM-DD
         team list|invite|update|delete <podcast_id> [id]
         contributors list|show|create|update|delete|assign|unassign …
         brand-affiliations list|show|create|update|delete|assign|unassign …

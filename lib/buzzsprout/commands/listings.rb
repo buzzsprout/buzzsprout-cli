@@ -3,7 +3,20 @@
 module Buzzsprout
   module Commands
     class Listings < Base
-      USAGE = 'buzzsprout listings <list|submit-all> <podcast_id>'
+      USAGE = 'buzzsprout listings [command] [flags]'
+      HELP_PAGE = {
+        summary: 'Directory listings for a podcast.',
+        usage: 'buzzsprout listings <command>',
+        aliases: %w[listings],
+        commands: [
+          ['list', 'List directory submissions (default)'],
+          ['submit-all', 'Submit remaining one-click directories']
+        ],
+        examples: [
+          'buzzsprout listings',
+          'buzzsprout listings submit-all'
+        ]
+      }.freeze
 
       def run
         verb = @args.shift || 'list'
@@ -11,7 +24,7 @@ module Buzzsprout
         when 'list' then list
         when 'submit-all', 'submit_all', 'submit' then submit_all
         else
-          raise USAGE
+          group_help
         end
       end
 
@@ -36,7 +49,22 @@ module Buzzsprout
     end
 
     class Podrolls < Base
-      USAGE = 'buzzsprout podrolls <list|create|update|delete> <podcast_id> [id]'
+      USAGE = 'buzzsprout podrolls [command] [flags]'
+      HELP_PAGE = {
+        summary: 'Manage a podcast podroll.',
+        usage: 'buzzsprout podrolls <command> [id]',
+        aliases: %w[podrolls],
+        commands: [
+          ['list', 'List podroll entries (default)'],
+          ['create', 'Create an entry (--guid, --feed-url)'],
+          ['update', 'Update an entry'],
+          ['delete', 'Delete an entry']
+        ],
+        examples: [
+          'buzzsprout podrolls',
+          'buzzsprout podrolls create --guid show-guid --feed-url https://example.com/feed.xml'
+        ]
+      }.freeze
 
       def run
         verb = @args.shift || 'list'
@@ -46,7 +74,7 @@ module Buzzsprout
         when 'update' then update
         when 'delete' then delete
         else
-          raise USAGE
+          group_help
         end
       end
 
@@ -90,7 +118,22 @@ module Buzzsprout
     end
 
     class FeedVerifications < Base
-      USAGE = 'buzzsprout feed-verifications <list|create|update|delete> <podcast_id> [id]'
+      USAGE = 'buzzsprout feed-verifications [command] [flags]'
+      HELP_PAGE = {
+        summary: 'Manage podcast feed verification tags.',
+        usage: 'buzzsprout feed-verifications <command> [id]',
+        aliases: %w[feed-verifications feed_verifications],
+        commands: [
+          ['list', 'List verification tags (default)'],
+          ['create', 'Create a tag (--value)'],
+          ['update', 'Update a tag'],
+          ['delete', 'Delete a tag']
+        ],
+        examples: [
+          'buzzsprout feed-verifications',
+          'buzzsprout feed-verifications create --value "abc123"'
+        ]
+      }.freeze
 
       def run
         verb = @args.shift || 'list'
@@ -100,7 +143,7 @@ module Buzzsprout
         when 'update' then update
         when 'delete' then delete
         else
-          raise USAGE
+          group_help
         end
       end
 
