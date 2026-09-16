@@ -15,6 +15,25 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 
 ## Installation
 
+Ruby 3.0+ is required.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
+buzzsprout login
+```
+
+That script (and only that script) checks for Ruby 3.0+, clones this repo into `~/.buzzsprout-cli`, and symlinks `bin/buzzsprout` to `~/.local/bin` (or `~/bin` if that directory is already on PATH). It does not `sudo`, and it will not overwrite `~/.buzzsprout-cli` if that path is not this repo or has uncommitted changes.
+
+Pin a branch or tag with `BUZZSPROUT_CLI_REF` (default `main`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | BUZZSPROUT_CLI_REF=v0.1.0 bash
+```
+
+The raw GitHub URL’s ref should be a tree that contains `script/install` — after merge that is `main`. Optional overrides: `BUZZSPROUT_CLI_HOME` (clone dir), `BUZZSPROUT_CLI_BIN` (where the executable goes), `BUZZSPROUT_CLI_REPO` (git remote).
+
+From a checkout you already have: `./script/install`.
+
 ### From source
 
 ```bash
@@ -27,11 +46,7 @@ Then either:
 
 - Run directly: `./bin/buzzsprout`
 - Add to PATH: `export PATH="$PATH:/path/to/buzzsprout-cli/bin"`
-- Install as a gem: `rake install`
-
-### Requirements
-
-- Ruby 3.0+
+- Install as a gem: `rake install` or `./script/install`
 
 ## First run
 
@@ -52,9 +67,9 @@ With no config yet, `buzzsprout` (or `buzzsprout login`) will:
 5. On failure: print a clear error and offer to retry / re-enter the token
 
 ```bash
-./bin/buzzsprout login
-./bin/buzzsprout login --no-animation
-./bin/buzzsprout login --token "$BUZZSPROUT_API_TOKEN" --no-animation
+buzzsprout login
+buzzsprout login --no-animation
+buzzsprout login --token "$BUZZSPROUT_API_TOKEN" --no-animation
 ```
 
 Skip the animation with `--no-animation` or `BUZZSPROUT_NO_ANIMATION=1`.

@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# Installer for https://github.com/higher-pixels/buzzsprout-cli
+#
+# After this lands on main:
+#   curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
+#   buzzsprout login
+#
+# Pin a branch or tag:
+#   curl -fsSL …/main/script/install | BUZZSPROUT_CLI_REF=v0.1.0 bash
+#
+# This script only checks Ruby 3.0+, clones this GitHub repo (or uses a local
+# checkout), and symlinks bin/buzzsprout onto ~/.local/bin. No sudo. No other
+# hosts. No extra | bash stages.
+set -euo pipefail
+
+# Don't inherit a caller’s Bundler (e.g. `bundle exec` in this repo).
+unset BUNDLE_GEMFILE BUNDLE_BIN_PATH BUNDLER_VERSION BUNDLER_SETUP RUBYLIB
+if [[ "${RUBYOPT:-}" == *bundler* ]]; then
+  unset RUBYOPT
+fi
+
+REPO_DEFAULT='https://github.com/higher-pixels/buzzsprout-cli.git'
+REPO="${BUZZSPROUT_CLI_REPO:-$REPO_DEFAULT}"
+REF="${BUZZSPROUT_CLI_REF:-main}"
+CACHE_DIR="${BUZZSPROUT_CLI_HOME:-${HOME}/.buzzsprout-cli}"
+
+die() {
+  printf 'buzzsprout-cli install: %s\n' "$*" >&2
+  exit 1
+}
+
+log() {
+  printf '==> %s\n' "$*"
+}
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "need \`$1\` on PATH"
+}
+
+normalize_git_url() {
+  local u="${1%.git}"
+  u="${u%/}"
+  u="${u/#git@github.com:/https://github.com/}"
+  printf '%s\n' "$u"
+}
+
+pick_bin_dir() {
+  if [[ -n "${BUZZSPROUT_CLI_BIN:-}" ]]; then
+    printf '%s\n' "$BUZZSPROUT_CLI_BIN"
+    return
+  fi
+  local d
+  for d in "${HOME}/.local/bin" "${HOME}/bin"; do
+    case ":${PATH}:" in
+      *":${d}:"*) printf '%s\n' "$d"; return ;;
+    esac
+  done
+  printf '%s\n' "${HOME}/.local/bin"
+}
+
+detect_local_root() {
+  local self="${BASH_SOURCE[0]:-}"
+  [[ -n "$self" && -f "$self" ]] || return 1
+  local root
+  root="$(cd "$(dirname "$self")/.." && pwd)" || return 1
+  [[ -f "$root/buzzsprout-cli.gemspec" && -f "$root/bin/buzzsprout" ]] || return 1
+  printf '%s\n' "$root"
+}
+
+require_ruby() {
+  need_cmd ruby
+  ruby -e 'exit(Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.0.0") ? 0 : 1)' \
+    || die "Ruby 3.0+ is required (found $(ruby -e 'print RUBY_VERSION')). Install a newer Ruby and retry."
+}
+
+sync_cache() {
+  need_cmd git
+  if [[ -d "${CACHE_DIR}/.git" ]]; then
+    local existing a b
+    existing="$(git -C "$CACHE_DIR" remote get-url origin 2>/dev/null || true)"
+    if [[ -n "$existing" ]]; then
+      a="$(normalize_git_url "$existing")"
+      b="$(normalize_git_url "$REPO")"
+      if [[ "$a" != "$b" ]]; then
+        die "refusing to reuse ${CACHE_DIR} (origin is ${existing}, expected ${REPO}). Move it aside or set BUZZSPROUT_CLI_HOME."
+      fi
+    fi
+    if [[ -n "$(git -C "$CACHE_DIR" status --porcelain)" ]]; then
+      die "refusing to overwrite ${CACHE_DIR} (uncommitted changes). Move it aside or set BUZZSPROUT_CLI_HOME."
+    fi
+    log "Updating ${CACHE_DIR} to ${REF}"
+    git -C "$CACHE_DIR" fetch origin "$REF"
+    if git -C "$CACHE_DIR" show-ref --verify --quiet "refs/heads/${REF}"; then
+      git -C "$CACHE_DIR" checkout "$REF"
+      git -C "$CACHE_DIR" merge --ff-only FETCH_HEAD
+    else
+      git -C "$CACHE_DIR" checkout -B "$REF" FETCH_HEAD
+    fi
+  elif [[ -e "$CACHE_DIR" ]]; then
+    die "refusing to overwrite ${CACHE_DIR} (not a git clone). Move it aside or set BUZZSPROUT_CLI_HOME."
+  else
+    log "Cloning ${REPO} into ${CACHE_DIR} (checkout ${REF})"
+    mkdir -p "$(dirname "$CACHE_DIR")"
+    git clone "$REPO" "$CACHE_DIR"
+    git -C "$CACHE_DIR" fetch origin "$REF" 2>/dev/null || git -C "$CACHE_DIR" fetch origin
+    git -C "$CACHE_DIR" checkout "$REF"
+  fi
+}
+
+install_bin() {
+  local src="$1"
+  local from="${src}/bin/buzzsprout"
+  [[ -f "${src}/buzzsprout-cli.gemspec" && -f "$from" ]] || die "no CLI sources in ${src} (ref ${REF}). If this is before merge to main, set BUZZSPROUT_CLI_REF to the CLI branch."
+  chmod +x "$from"
+
+  mkdir -p "$BIN_DIR"
+  if [[ -e "${BIN_DIR}/buzzsprout" || -L "${BIN_DIR}/buzzsprout" ]]; then
+    log "Replacing existing ${BIN_DIR}/buzzsprout"
+    ls -l "${BIN_DIR}/buzzsprout" || true
+  fi
+
+  log "Linking ${from} -> ${BIN_DIR}/buzzsprout"
+  ln -sfn "$from" "${BIN_DIR}/buzzsprout"
+}
+
+BIN_DIR="$(pick_bin_dir)"
+
+require_ruby
+
+LOCAL_ROOT="$(detect_local_root || true)"
+if [[ -n "$LOCAL_ROOT" && -z "${BUZZSPROUT_CLI_REPO:-}" ]]; then
+  SRC="$LOCAL_ROOT"
+  SOURCE_LABEL="local checkout ${SRC}"
+else
+  SRC="$CACHE_DIR"
+  SOURCE_LABEL="${REPO} @ ${REF} → ${CACHE_DIR}"
+fi
+
+log "Install plan"
+printf '    Ruby:     %s\n' "$(ruby -e 'print RUBY_VERSION')"
+printf '    Source:   %s\n' "$SOURCE_LABEL"
+printf '    Binary:   %s/buzzsprout\n' "$BIN_DIR"
+
+if [[ "$SRC" == "$CACHE_DIR" ]]; then
+  sync_cache
+fi
+
+install_bin "$SRC"
+
+exe="${BIN_DIR}/buzzsprout"
+[[ -x "$exe" ]] || die "install finished but ${exe} is missing"
+
+ver="$("$exe" version 2>&1)" || die "installed ${exe} but it failed to run: ${ver}"
+log "Installed ${ver}"
+
+case ":${PATH}:" in
+  *":${BIN_DIR}:"*)
+    ;;
+  *)
+    printf '\n%s is not on PATH. Add this to your shell rc:\n' "$BIN_DIR"
+    printf '  export PATH="%s:$PATH"\n' "$BIN_DIR"
+    ;;
+esac
+
+found="$(command -v buzzsprout 2>/dev/null || true)"
+if [[ -n "$found" ]]; then
+  found_real="$(cd "$(dirname "$found")" && pwd)/$(basename "$found")"
+  exe_real="$(cd "$(dirname "$exe")" && pwd)/$(basename "$exe")"
+  if [[ "$found_real" != "$exe_real" ]]; then
+    printf '\nNote: another `buzzsprout` is first on PATH: %s\n' "$found"
+    printf 'This install wrote: %s\n' "$exe"
+  fi
+fi
+
+printf '\nNext:\n'
+printf '  buzzsprout login\n'
+printf '\nTip: skip the animation with --no-animation or BUZZSPROUT_NO_ANIMATION=1.\n'
