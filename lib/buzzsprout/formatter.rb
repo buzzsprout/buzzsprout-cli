@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require_relative 'podcast_picker'
 
 module Buzzsprout
   class Formatter
@@ -19,7 +20,7 @@ module Buzzsprout
       @io.puts "#{label.ljust(16)} #{value}"
     end
 
-      def list_podcasts(podcasts)
+    def list_podcasts(podcasts)
       heading('Podcasts')
       rows = wrap_list(podcasts)
       if rows.empty?
@@ -28,10 +29,7 @@ module Buzzsprout
       end
 
       rows.each do |podcast|
-        @io.puts "#{podcast['id']}  #{podcast['title']}"
-        bits = [podcast['author'], [podcast['main_category'], podcast['sub_category']].compact.join(' / ')].reject { |bit| bit.to_s.empty? }
-        @io.puts "    #{bits.join('  •  ')}" unless bits.empty?
-        @io.puts "    #{podcast['rss_url']}" if podcast['rss_url']
+        @io.puts PodcastPicker.format_label(podcast, io: @io)
       end
     end
 

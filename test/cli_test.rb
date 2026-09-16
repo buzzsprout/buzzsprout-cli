@@ -154,9 +154,16 @@ class CLITest < Buzzsprout::Test
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
+        status, out, err = run_cli(['podcasts'])
+        assert_equal 0, status, err
+        assert_match(/Life Empowerment - #10/, out)
+        refute_match(/Mike/, out)
+        refute_match(/\d+\s{2}Life Empowerment/, out)
+
         status, out, err = run_cli(['podcasts', '--json'])
         assert_equal 0, status, err
         assert_match(/Life Empowerment/, out)
+        assert_match(/Mike/, out)
 
         status, out, err = run_cli(['podcasts', 'show', '10', '--json'])
         assert_equal 0, status, err

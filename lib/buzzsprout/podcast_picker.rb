@@ -50,6 +50,14 @@ module Buzzsprout
       new(list, io: io, stdin: stdin, default_id: default_id).select!
     end
 
+    # Human-readable row: "Title - #12345" (id dimmed when color is on).
+    def self.format_label(podcast, io: $stdout)
+      row = stringify(podcast)
+      title = row['title'].to_s
+      id_part = Color.dim(title.empty? ? "##{row['id']}" : " - ##{row['id']}", io: io)
+      title.empty? ? id_part : "#{title}#{id_part}"
+    end
+
     def filtered
       q = @filter.downcase
       return @podcasts if q.empty?
@@ -170,16 +178,11 @@ module Buzzsprout
     def format_row(podcast, active)
       title = truncate(podcast['title'].to_s)
       marker = active ? '▸ ' : '  '
-      id_text = "##{podcast['id']}"
-      id_part = Color.dim(title.empty? ? id_text : " - #{id_text}", io: @io)
-      return "#{marker}#{id_part}" if title.empty?
+      row = { 'id' => podcast['id'], 'title' => title }
+      return "#{marker}#{self.class.format_label(row, io: @io)}" unless active && !title.empty?
 
-      named = if active
-                Color.paint(title, Color::BOLD, highlight_code, io: @io)
-              else
-                title
-              end
-      "#{marker}#{named}#{id_part}"
+      named = Color.paint(title, Color::BOLD, highlight_code, io: @io)
+      "#{marker}#{named}#{Color.dim(" - ##{podcast['id']}", io: @io)}"
     end
 
     def highlight_code

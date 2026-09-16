@@ -84,6 +84,11 @@ class PodcastPickerTest < Buzzsprout::Test
     refute_match(/\d+\s{2}Life Empowerment/, output)
   end
 
+  def test_format_label_is_title_then_id
+    label = Buzzsprout::PodcastPicker.format_label({ 'id' => 10, 'title' => 'Life Empowerment' })
+    assert_equal 'Life Empowerment - #10', label
+  end
+
   def test_rows_dim_id_when_color_enabled
     ENV.delete('NO_COLOR')
     ENV.delete('BUZZSPROUT_NO_COLOR')
