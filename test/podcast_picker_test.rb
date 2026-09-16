@@ -69,8 +69,28 @@ class PodcastPickerTest < Buzzsprout::Test
     io = StringIO.new
     chosen = Buzzsprout::PodcastPicker.new(PODCASTS, io: io, stdin: stdin).select!
     assert_equal 20, chosen['id']
-    assert_includes io.string, 'Youth Podcast'
+    assert_includes io.string, 'Youth Podcast - #20'
     assert_includes io.string, 'Select a podcast'
+  end
+
+  def test_rows_lead_with_title_then_id
+    stdin = StringIO.new("\r")
+    io = StringIO.new
+    Buzzsprout::PodcastPicker.new(PODCASTS, io: io, stdin: stdin).select!
+    output = io.string
+    assert_includes output, 'Life Empowerment - #10'
+    assert_includes output, 'Youth Podcast - #20'
+    assert_includes output, 'Tech Talk - #30'
+    refute_match(/\d+\s{2}Life Empowerment/, output)
+  end
+
+  def test_rows_dim_id_when_color_enabled
+    ENV.delete('NO_COLOR')
+    ENV.delete('BUZZSPROUT_NO_COLOR')
+    stdin = StringIO.new("\r")
+    io = Buzzsprout::FakeTty.new
+    Buzzsprout::PodcastPicker.new(PODCASTS, io: io, stdin: stdin).select!
+    assert_match(/\e\[2m - #10\e\[0m/, io.string)
   end
 
   def test_select_bang_filter_then_enter

@@ -168,12 +168,18 @@ module Buzzsprout
     end
 
     def format_row(podcast, active)
-      label = "#{podcast['id']}  #{truncate(podcast['title'].to_s)}"
-      if active
-        Color.paint("▸ #{label}", Color::BOLD, highlight_code, io: @io)
-      else
-        "  #{label}"
-      end
+      title = truncate(podcast['title'].to_s)
+      marker = active ? '▸ ' : '  '
+      id_text = "##{podcast['id']}"
+      id_part = Color.dim(title.empty? ? id_text : " - #{id_text}", io: @io)
+      return "#{marker}#{id_part}" if title.empty?
+
+      named = if active
+                Color.paint(title, Color::BOLD, highlight_code, io: @io)
+              else
+                title
+              end
+      "#{marker}#{named}#{id_part}"
     end
 
     def highlight_code
