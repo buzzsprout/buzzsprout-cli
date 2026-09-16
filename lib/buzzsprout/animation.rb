@@ -18,7 +18,8 @@ module Buzzsprout
 
       Color.theme(@io)
       hide_cursor
-      run_block(frames.map { |frame| colorize(frame) }, @delay || DELAY)
+      # Leave the finale wordmark on screen; auth continues below it.
+      run_block(frames.map { |frame| colorize(frame) }, @delay || DELAY, erase: false)
     ensure
       show_cursor
     end
@@ -28,7 +29,7 @@ module Buzzsprout
 
       Color.theme(@io)
       hide_cursor
-      run_block(confetti_frames, @delay || CONFETTI_DELAY)
+      run_block(confetti_frames, @delay || CONFETTI_DELAY, erase: true)
     ensure
       show_cursor
     end
@@ -158,21 +159,22 @@ module Buzzsprout
       @io.print "\e[?25h" if @io.respond_to?(:print)
     end
 
-    def run_block(frames, delay)
+    def run_block(frames, delay, erase: false)
       height = frames.first&.size.to_i
       return if height <= 0
 
       # Scroll the prompt up if we are near the bottom, then remember this
       # origin. Height-only CSI A is wrong when lines wrap; save/restore is not.
       height.times { @io.print "\n" }
-      @io.print "\e[#{height}A\r\e7\e[s"
+      @io.print "\e[#{height}A\r"
+      @io.print "\e7\e[s" if erase
 
       frames.each_with_index do |lines, index|
         home_cursor(height) if index.positive?
         paint_lines(lines)
         sleep delay
       end
-      restore_and_erase
+      restore_and_erase if erase
     end
 
     # CSI n A preserves column on some terminals (Ghostty); CR + EL so a
@@ -191,7 +193,8 @@ module Buzzsprout
 
     def restore_and_erase
       # DECRC + SCORC back to the pre-animation origin, reset SGR, erase
-      # downward so Welcome is not printed under leftover braille.
+      # downward. Used by confetti so debris does not linger; the intro
+      # wordmark is left in place so it stays visible through auth.
       @io.print "\e8\e[u\e[0m\e[0J"
     end
   end

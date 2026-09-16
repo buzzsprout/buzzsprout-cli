@@ -50,16 +50,17 @@ class AnimationTest < Buzzsprout::Test
     assert_includes io.string, '⣿'
   end
 
-  def test_play_erases_animation_block_so_welcome_is_clean
+  def test_play_leaves_wordmark_visible
     io = StringIO.new
     Buzzsprout::Animation.new(io: io, delay: 0, force: true).play
     output = io.string
-    assert_includes output, "\e7"
-    assert_includes output, "\e8"
+    last_braille = output.rindex('⣿')
+    refute_nil last_braille
+    after = output[last_braille..]
+    refute_includes after, "\e8", 'DECSC restore must not run after the finale wordmark'
+    refute_includes after, "\e[u", 'SCORC restore must not run after the finale wordmark'
+    refute_includes after, "\e[0J", 'ED must not wipe the wordmark after it is shown'
     assert_includes output, "\e[2K"
-    assert_includes output, "\e[0J"
-    assert_operator output.rindex("\e8"), :>, output.rindex('⣿')
-    assert_operator output.rindex("\e[0J"), :>, output.rindex('⣿')
   end
 
   def test_confetti_skipped_on_non_tty
