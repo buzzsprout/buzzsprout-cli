@@ -14,7 +14,8 @@ module Buzzsprout
     def setup
       @env_keys = %w[
         BUZZSPROUT_API_TOKEN BUZZSPROUT_PODCAST_ID BUZZSPROUT_CONFIG
-        BUZZSPROUT_API_BASE BUZZSPROUT_NO_ANIMATION NO_COLOR CI
+        BUZZSPROUT_API_BASE BUZZSPROUT_NO_ANIMATION BUZZSPROUT_THEME
+        BUZZSPROUT_NO_COLOR NO_COLOR COLORFGBG CI
       ]
       @saved_env = @env_keys.to_h { |key| [key, ENV[key]] }
       @env_keys.each { |key| ENV.delete(key) }
@@ -22,10 +23,12 @@ module Buzzsprout
       ENV['NO_COLOR'] = '1'
       ENV['CI'] = '1'
       Config.clear_cache
+      Color.reset_theme!
     end
 
     def teardown
       Config.clear_cache
+      Color.reset_theme!
       @saved_env.each do |key, value|
         if value.nil?
           ENV.delete(key)

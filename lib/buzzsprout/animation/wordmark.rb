@@ -8,7 +8,10 @@ module Buzzsprout
     HEIGHT = 9
     DELAY = 0.055
     BOLT_COLOR = '#61D752'
-    MARK_COLOR = '#214538'
+    MARK_COLOR_LIGHT = '#214538'
+    # Dark terminals: same hero green for bolt + wordmark (dark brand green vanishes).
+    MARK_COLOR_DARK = BOLT_COLOR
+    MARK_COLOR = MARK_COLOR_LIGHT
 
     WORDMARK = [
       '    ⢰⡇       ⣀⣀⣀⣀⡀                                                          ',

@@ -81,6 +81,8 @@ module Buzzsprout
         BUZZSPROUT_CONFIG     Config path (default ~/.buzzsprout.json)
         BUZZSPROUT_API_BASE   API base (default https://www.buzzsprout.com/api)
         BUZZSPROUT_NO_ANIMATION=1
+        BUZZSPROUT_THEME      dark|light (intro contrast; auto-detects otherwise)
+        NO_COLOR              Disable ANSI color
     HELP
 
     ROUTES = {

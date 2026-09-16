@@ -129,12 +129,20 @@ module Buzzsprout
         kind_chars = kinds.chars
         line.chars.each_with_index.map do |char, x|
           case kind_chars[x]
-          when 'b' then Color.rgb(char, BOLT_COLOR, io: @io)
-          when 'm' then Color.rgb(char, MARK_COLOR, io: @io)
+          when 'b' then Color.rgb(char, bolt_hex, io: @io)
+          when 'm' then Color.rgb(char, mark_hex, io: @io)
           else char
           end
         end.join
       end
+    end
+
+    def bolt_hex
+      BOLT_COLOR
+    end
+
+    def mark_hex
+      Color.theme(@io) == :light ? MARK_COLOR_LIGHT : MARK_COLOR_DARK
     end
   end
 end

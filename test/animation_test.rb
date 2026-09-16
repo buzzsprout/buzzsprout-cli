@@ -61,4 +61,32 @@ class AnimationTest < Buzzsprout::Test
     assert_match(/\S/, early)
     assert_match(/\S/, finale.map { |line| line.chars[mark..].join }.join)
   end
+
+  def test_dark_theme_colors_wordmark_bright_green
+    ENV.delete('NO_COLOR')
+    ENV['BUZZSPROUT_THEME'] = 'dark'
+    Buzzsprout::Color.reset_theme!
+    io = FakeTty.new
+    lines = Buzzsprout::Animation.new(io: io, delay: 0, force: true).send(:colorize, Buzzsprout::Animation.frames.last)
+    joined = lines.join
+    assert_includes joined, '38;2;97;215;82'
+    refute_includes joined, '38;2;33;69;56'
+  end
+
+  def test_light_theme_keeps_dark_mark_and_bright_bolt
+    ENV.delete('NO_COLOR')
+    ENV['BUZZSPROUT_THEME'] = 'light'
+    Buzzsprout::Color.reset_theme!
+    io = FakeTty.new
+    lines = Buzzsprout::Animation.new(io: io, delay: 0, force: true).send(:colorize, Buzzsprout::Animation.frames.last)
+    joined = lines.join
+    assert_includes joined, '38;2;97;215;82'
+    assert_includes joined, '38;2;33;69;56'
+  end
+
+  class FakeTty < StringIO
+    def tty?
+      true
+    end
+  end
 end

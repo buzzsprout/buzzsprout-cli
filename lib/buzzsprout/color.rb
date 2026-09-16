@@ -62,5 +62,79 @@ module Buzzsprout
       b = value[4, 2].to_i(16)
       paint(text, "\e[38;2;#{r};#{g};#{b}m", io: io)
     end
+
+    # :dark or :light. Override with BUZZSPROUT_THEME=dark|light.
+    # Otherwise COLORFGBG, then an OSC 11 query on a TTY, then dark (readable
+    # bright green). Skips OSC when CI=1 so tests and bots do not block.
+    def theme(io = $stdout)
+      @theme_cache ||= {}
+      key = "#{ENV['BUZZSPROUT_THEME']}|#{ENV['COLORFGBG']}|#{io.object_id}"
+      @theme_cache[key] ||= detect_theme(io)
+    end
+
+    def reset_theme!
+      @theme_cache = {}
+    end
+
+    def detect_theme(io = $stdout)
+      override = ENV['BUZZSPROUT_THEME'].to_s.strip.downcase
+      return :dark if override == 'dark'
+      return :light if override == 'light'
+
+      from_colorfgbg || probe_osc11(io) || :dark
+    end
+
+    def from_colorfgbg
+      raw = ENV['COLORFGBG'].to_s
+      return nil if raw.empty?
+
+      bg = raw.split(';').reverse.find { |part| part.match?(/\A\d+\z/) }
+      return nil unless bg
+
+      n = bg.to_i
+      n == 7 || n >= 9 ? :light : :dark
+    end
+
+    # OSC 11 → rgb:RR/GG/BB. Luma > 0.5 is a light background.
+    def parse_osc11(response)
+      match = response.to_s.match(/rgb:([0-9a-fA-F]+)\/([0-9a-fA-F]+)\/([0-9a-fA-F]+)/)
+      return nil unless match
+
+      channels = match.captures.map do |hex|
+        hex.to_i(16).to_f / ((16**hex.length) - 1)
+      end
+      luma = (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2])
+      luma > 0.5 ? :light : :dark
+    end
+
+    def probe_osc11(io = $stdout)
+      return nil if ENV['CI']
+      return nil unless io.respond_to?(:tty?) && io.tty?
+      return nil unless File.exist?('/dev/tty')
+
+      File.open('/dev/tty', 'r+') do |tty|
+        tty.write "\e]11;?\e\\"
+        tty.flush
+        buf = +''
+        deadline = now + 0.08
+        loop do
+          left = deadline - now
+          break if left <= 0
+
+          ready, = IO.select([tty], nil, nil, left)
+          break unless ready
+
+          buf << tty.read_nonblock(256)
+          break if buf.include?("\a") || buf.include?("\e\\")
+        end
+        parse_osc11(buf)
+      end
+    rescue Errno::ENXIO, Errno::ENOTTY, Errno::ENOENT, Errno::EAGAIN, Errno::EWOULDBLOCK, EOFError, IOError, ArgumentError
+      nil
+    end
+
+    def now
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
   end
 end

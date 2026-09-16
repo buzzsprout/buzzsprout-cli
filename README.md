@@ -76,7 +76,7 @@ Then either:
 
 With no config yet, `buzzsprout` (or `buzzsprout login`) will:
 
-1. Play a short braille animation of the Buzzsprout logo (sprout/bolt grows, then the “Buzzsprout” wordmark wipes in). The art is a constant in the Ruby source — no image files in the repo.
+1. Play a short braille animation of the Buzzsprout logo (sprout/bolt grows, then the “Buzzsprout” wordmark wipes in). The art is a constant in the Ruby source — no image files in the repo. On dark terminals the bolt and wordmark use bright green `#61D752`; on light terminals the wordmark stays dark `#214538`. Override with `BUZZSPROUT_THEME=dark` or `light` (`NO_COLOR` still disables color).
 2. Prompt for your API token (**Profile → API** in Buzzsprout)
 3. Test the connection:
 
@@ -191,7 +191,8 @@ Copy or symlink into whatever directory your agent already loads (`~/.cursor/ski
 | `BUZZSPROUT_CONFIG` | Config path (default `~/.buzzsprout.json`) |
 | `BUZZSPROUT_API_BASE` | API base (default `https://www.buzzsprout.com/api`) |
 | `BUZZSPROUT_NO_ANIMATION=1` | Skip the intro |
-| `NO_COLOR` | Disable ANSI color |
+| `BUZZSPROUT_THEME` | `dark` or `light` for the intro. If unset: `COLORFGBG`, then OSC 11 on a TTY, otherwise **dark** (bright green `#61D752` for bolt + wordmark). Light terminals use `#214538` for the wordmark. |
+| `NO_COLOR` / `BUZZSPROUT_NO_COLOR` | Disable ANSI color |
 
 ## Development
 
