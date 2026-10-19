@@ -1,0 +1,25 @@
+# Dependencies
+Gemfile.lock
+
+# Gem build artifacts
+*.gem
+pkg/
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# macOS
+.DS_Store
+
+# Don't commit credentials (these live in ~/ but just in case)
+.buzzsprout.json
+
+# Bundler
+vendor/bundle
+.bundle/
+
+# Wordmark lives in lib/buzzsprout/animation/wordmark.rb — no logo binaries.
+/assets/
