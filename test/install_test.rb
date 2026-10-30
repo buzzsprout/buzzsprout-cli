@@ -14,13 +14,13 @@ class InstallTest < Buzzsprout::Test
 
   def test_readme_documents_public_repo_install_and_updates
     readme = File.read(File.expand_path('../README.md', __dir__))
-    assert_includes readme, 'git clone https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli'
+    assert_includes readme, 'git clone https://github.com/buzzsprout/buzzsprout-cli.git ~/.buzzsprout-cli'
     assert_includes readme, '~/.buzzsprout-cli/script/install'
     assert_includes readme, 'buzzsprout login'
     assert_includes readme, 'buzzsprout update --check --json'
     assert_includes readme, 'no GitHub account is required'
-    curl_idx = readme.index('curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash')
-    clone_idx = readme.index('git clone https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli')
+    curl_idx = readme.index('curl -fsSL https://raw.githubusercontent.com/buzzsprout/buzzsprout-cli/main/script/install | bash')
+    clone_idx = readme.index('git clone https://github.com/buzzsprout/buzzsprout-cli.git ~/.buzzsprout-cli')
     refute_nil curl_idx
     refute_nil clone_idx
     assert_operator curl_idx, :<, clone_idx
@@ -33,6 +33,15 @@ class InstallTest < Buzzsprout::Test
     assert_includes text, 'BUZZSPROUT_CLI_REF'
     assert_includes text, 'ln -sfn'
     refute_match(/curl .*\| *bash/, text.split("\n").grep_v(/^\s*#/).join("\n"))
+  end
+
+  def test_installer_recognizes_existing_legacy_remote
+    definitions = File.read(script).split('BIN_DIR="$(pick_bin_dir)"').first
+    %w[https://github.com/higher-pixels/buzzsprout-cli.git git@github.com:higher-pixels/buzzsprout-cli.git https://github.com/buzzsprout/buzzsprout-cli.git].each do |remote|
+      out, err, status = Open3.capture3('bash', '-c', definitions + "\nnormalize_git_url \"$1\"\n", 'test', remote)
+      assert status.success?, err
+      assert_equal 'https://github.com/buzzsprout/buzzsprout-cli', out.strip
+    end
   end
 
   def test_install_from_local_checkout

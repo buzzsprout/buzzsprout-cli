@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Installer for https://github.com/higher-pixels/buzzsprout-cli
+# Installer for https://github.com/buzzsprout/buzzsprout-cli
 #
 # Install from the public repository:
-#   curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
+#   curl -fsSL https://raw.githubusercontent.com/buzzsprout/buzzsprout-cli/main/script/install | bash
 #   buzzsprout login
 # Already have a checkout: ./script/install
 # Later updates: buzzsprout update
@@ -18,7 +18,7 @@ if [[ "${RUBYOPT:-}" == *bundler* ]]; then
   unset RUBYOPT
 fi
 
-REPO_DEFAULT='https://github.com/higher-pixels/buzzsprout-cli.git'
+REPO_DEFAULT='https://github.com/buzzsprout/buzzsprout-cli.git'
 REPO="${BUZZSPROUT_CLI_REPO:-$REPO_DEFAULT}"
 REF="${BUZZSPROUT_CLI_REF:-main}"
 CACHE_DIR="${BUZZSPROUT_CLI_HOME:-${HOME}/.buzzsprout-cli}"
@@ -40,6 +40,9 @@ normalize_git_url() {
   local u="${1%.git}"
   u="${u%/}"
   u="${u/#git@github.com:/https://github.com/}"
+  if [[ "$u" == 'https://github.com/higher-pixels/buzzsprout-cli' ]]; then
+    u='https://github.com/buzzsprout/buzzsprout-cli'
+  fi
   printf '%s\n' "$u"
 }
 

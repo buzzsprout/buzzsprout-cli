@@ -91,6 +91,23 @@ class UpdaterTest < Buzzsprout::Test
     end
   end
 
+  def test_accepts_canonical_and_legacy_official_remotes
+    with_installation do |_updater, _source, installed|
+      updater = Buzzsprout::Updater.new(root: installed)
+      %w[buzzsprout higher-pixels].each do |owner|
+        ["https://github.com/#{owner}/buzzsprout-cli.git",
+         "https://github.com/#{owner}/buzzsprout-cli",
+         "git@github.com:#{owner}/buzzsprout-cli.git"].each do |remote|
+          git(installed, 'remote', 'set-url', 'origin', remote)
+          updater.validate!
+          updater.stub(:latest_commit, git(installed, 'rev-parse', 'HEAD')) do
+            refute updater.check[:update_available], remote
+          end
+        end
+      end
+    end
+  end
+
   def test_refuses_local_commits_without_resetting_them
     with_installation do |updater, source, installed|
       git(installed, 'config', 'user.name', 'Test')

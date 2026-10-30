@@ -18,7 +18,7 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 On macOS or Linux, install Ruby 3.0+ and Git, then run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
+curl -fsSL https://raw.githubusercontent.com/buzzsprout/buzzsprout-cli/main/script/install | bash
 buzzsprout login
 ```
 
@@ -27,7 +27,7 @@ The repository is public; no GitHub account is required. The installer clones in
 To inspect the code before installing:
 
 ```bash
-git clone https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
+git clone https://github.com/buzzsprout/buzzsprout-cli.git ~/.buzzsprout-cli
 ~/.buzzsprout-cli/script/install
 buzzsprout login
 ```
@@ -55,7 +55,7 @@ Installer overrides: `BUZZSPROUT_CLI_HOME` (clone directory), `BUZZSPROUT_CLI_BI
 ### From source
 
 ```bash
-git clone https://github.com/higher-pixels/buzzsprout-cli.git
+git clone https://github.com/buzzsprout/buzzsprout-cli.git
 cd buzzsprout-cli
 bundle install
 ```

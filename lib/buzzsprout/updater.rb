@@ -7,8 +7,9 @@ require 'timeout'
 
 module Buzzsprout
   class Updater
-    REPOSITORY = 'https://github.com/higher-pixels/buzzsprout-cli.git'
-    ENDPOINT = 'https://api.github.com/repos/higher-pixels/buzzsprout-cli/commits/main'
+    REPOSITORY = 'https://github.com/buzzsprout/buzzsprout-cli.git'
+    LEGACY_REPOSITORY = 'https://github.com/higher-pixels/buzzsprout-cli.git'
+    ENDPOINT = 'https://api.github.com/repos/buzzsprout/buzzsprout-cli/commits/main'
     INTERVAL = 86_400
 
     def initialize(root: File.expand_path('../..', __dir__), repository: REPOSITORY)
@@ -21,8 +22,13 @@ module Buzzsprout
         raise 'Self-update requires a Git installation. For a gem installation, run: gem update buzzsprout-cli'
       end
       remote = git('remote', 'get-url', 'origin')
-      unless [@repository, @repository.delete_suffix('.git'), 'git@github.com:higher-pixels/buzzsprout-cli.git'].include?(remote)
-        raise 'Self-update requires the official higher-pixels/buzzsprout-cli repository.'
+      repositories = @repository == REPOSITORY ? [REPOSITORY, LEGACY_REPOSITORY] : [@repository]
+      accepted_remotes = repositories.flat_map do |repository|
+        [repository, repository.delete_suffix('.git'),
+         repository.sub('https://github.com/', 'git@github.com:')]
+      end
+      unless accepted_remotes.include?(remote)
+        raise 'Self-update requires the official buzzsprout/buzzsprout-cli repository.'
       end
       # get-url above expands url.<base>.insteadOf, but fetch uses @repository directly,
       # so a rule matching only that spelling would redirect the fetch past the check.

@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = 'Command-line interface for the Buzzsprout API'
   spec.description   = 'A fun, agent-friendly CLI for Buzzsprout. Authenticate with an API token, list podcasts and episodes, and call the rest of the API.'
-  spec.homepage      = 'https://github.com/higher-pixels/buzzsprout-cli'
+  spec.homepage      = 'https://github.com/buzzsprout/buzzsprout-cli'
   spec.license       = 'MIT'
 
   spec.required_ruby_version = '>= 3.0.0'
