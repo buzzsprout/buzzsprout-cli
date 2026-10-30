@@ -78,6 +78,77 @@ class FakeApi
 end
 
 class CLITest < Buzzsprout::Test
+  def test_contributor_headshots_on_create_and_update
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      api = FakeApi.new(
+        ['POST', '/api/10/contributors'] => { status: 201, body: { id: 123, name: 'Jane', headshot_url: 'https://example.com/headshot' } },
+        ['PATCH', '/api/10/contributors/123'] => { status: 200, body: { id: 123, headshot_url: 'https://example.com/headshot' } },
+        ['GET', '/api/10/contributors/123'] => { status: 200, body: { id: 123, name: 'Jane', headshot_url: 'https://example.com/headshot' } }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        Dir.mktmpdir do |dir|
+          file = File.join(dir, 'portrait.JPG')
+          File.binwrite(file, "image\xFFbytes".b)
+          status, _, err = run_cli(['contributors', 'create', '10', '--name', 'José', '--role', 'Guest', '--file', file])
+          assert_equal 0, status, err
+          status, _, err = run_cli(['contributors', 'update', '10', '123', '--body', '{"bio":"Hello"}', '--file', file])
+          assert_equal 0, status, err
+
+          create, update = api.requests
+          [create, update].each do |request|
+            assert_match(%r{multipart/form-data; boundary=}, request[:content_type])
+            assert_includes request[:body], 'name="headshot_file"; filename="portrait.JPG"'
+            assert_includes request[:body], 'Content-Type: image/jpeg'
+            assert_includes request[:body], "image\xFFbytes".b
+          end
+          assert_includes create[:body], "name=\"name\"\r\n\r\nJosé".b
+          assert_includes create[:body], "name=\"role\"\r\n\r\nGuest"
+          assert_includes update[:body], "name=\"bio\"\r\n\r\nHello"
+
+          status, out, err = run_cli(['contributors', 'show', '10', '123'])
+          assert_equal 0, status, err
+          assert_includes out, 'https://example.com/headshot'
+          status, out, err = run_cli(['contributors', 'show', '10', '123', '--json'])
+          assert_equal 0, status, err
+          assert_equal 'https://example.com/headshot', JSON.parse(out)['headshot_url']
+        end
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_contributor_json_writes_and_headshot_errors
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
+      api = FakeApi.new(
+        ['POST', '/api/10/contributors'] => { status: 201, body: { id: 123, name: 'Jane' } },
+        ['PATCH', '/api/10/contributors/123'] => { status: 422, body: { error: { code: 'invalid', message: 'Headshot is invalid', param: 'headshot' } } }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, _, err = run_cli(['contributors', 'create', '10', '--name', 'Jane'])
+        assert_equal 0, status, err
+        assert_match(%r{application/json}, api.requests.first[:content_type])
+        assert_equal({ 'name' => 'Jane' }, JSON.parse(api.requests.first[:body]))
+        Dir.mktmpdir do |dir|
+          file = File.join(dir, 'portrait.png')
+          File.binwrite(file, 'invalid image')
+          status, _, err = run_cli(['contributors', 'update', '10', '123', '--file', file])
+          assert_equal 1, status
+          assert_match(/Headshot is invalid.*headshot/, err)
+          status, _, err = run_cli(['contributors', 'update', '10', '123', '--file', File.join(dir, 'missing.png')])
+          assert_equal 1, status
+          assert_match(/File not found/, err)
+        end
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
   def test_help_and_version
       status, out, = run_cli(['--help'])
     assert_equal 0, status

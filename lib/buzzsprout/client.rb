@@ -62,8 +62,8 @@ module Buzzsprout
       request(:put, path, body: body, headers: headers)
     end
 
-    def patch(path, body: nil)
-      request(:patch, path, body: body)
+    def patch(path, body: nil, multipart: nil)
+      request(:patch, path, body: body, multipart: multipart)
     end
 
     def delete(path)
@@ -251,7 +251,7 @@ module Buzzsprout
         end
       end
       chunks << "--#{boundary}--\r\n"
-      [chunks.join, "multipart/form-data; boundary=#{boundary}"]
+      [chunks.map(&:b).join, "multipart/form-data; boundary=#{boundary}"]
     end
 
     class NetTransport

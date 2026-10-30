@@ -43,11 +43,16 @@ curl -sS -X POST "https://www.buzzsprout.com/api/PODCAST_ID/contributors" \
 
 Roles: `Host`, `Co-Host`, `Producer`, `Editor`, `Guest` (case-insensitive on write). `bio` is HTML, 1000-character limit including tags.
 
+Create or update with a headshot using multipart form data and the `headshot_file` file field. PNG, JPEG, and WebP images up to 15 MB are accepted. Contributor responses include `headshot_url` (or null when absent).
+
 ## CLI
 
 ```bash
 buzzsprout contributors list 10
 buzzsprout contributors create 10 --name "Guest Star" --role Guest
+buzzsprout contributors create 10 --name "Guest Star" --role Guest --file ./headshot.jpg
+buzzsprout contributors update 10 123 --file ./headshot.png
+buzzsprout contributors show 10 123
 buzzsprout contributors assign 10 788881 123
 buzzsprout contributors unassign 10 788881 123
 ```
