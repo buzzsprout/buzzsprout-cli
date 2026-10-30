@@ -19,6 +19,20 @@ class RedactTest < Buzzsprout::Test
     refute_includes json, 'super-secret-token'
   end
 
+  def test_redacts_authorization_code_without_touching_pkce_challenge
+    url = 'https://example.com/oauth/callback?code=secret-auth-code&code_challenge=pkce-challenge&code_challenge_method=S256'
+    text = Buzzsprout::Redact.uri(url)
+    assert_includes text, 'code=[REDACTED]'
+    refute_includes text, 'secret-auth-code'
+    assert_includes text, 'code_challenge=pkce-challenge'
+  end
+
+  def test_does_not_redact_keys_merely_ending_in_a_secret_name
+    text = Buzzsprout::Redact.string('https://example.com/api?barcode=12345&episode_code=abc')
+    assert_includes text, 'barcode=12345'
+    assert_includes text, 'episode_code=abc'
+  end
+
   def test_redacts_known_long_secret_anywhere
     text = Buzzsprout::Redact.string('leaked super-secret-token in an error', known: 'super-secret-token')
     refute_includes text, 'super-secret-token'

@@ -78,6 +78,83 @@ class FakeApi
 end
 
 class CLITest < Buzzsprout::Test
+
+  def test_oauth_login_and_token_exchange
+    with_config do
+      ENV['BUZZSPROUT_OAUTH_CLIENT_ID'] = 'public-client'
+      api = FakeApi.new(
+        '/oauth/token' => { body: { access_token: 'oauth-access', refresh_token: 'oauth-refresh', expires_in: 3600, token_type: 'Bearer' } },
+        '/api/podcasts' => { body: [{ id: 10, title: 'My podcast' }] }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        credentials = Buzzsprout::OAuth.token_request({ grant_type: 'authorization_code', client_id: 'public-client', code: 'test-code', code_verifier: 'test-verifier' })
+        credentials.merge!(client_id: 'public-client', issuer: Buzzsprout::OAuth.issuer, api_base: api.base)
+        Buzzsprout::Config.save(api_token: 'old-token', default_podcast_id: 99)
+        Buzzsprout::OAuth.stub(:authorize, credentials) do
+          status, out, err = run_cli(['login', '--no-skills'])
+          assert_equal 0, status, err
+          assert_includes out, 'Welcome to the Buzzsprout CLI'
+          assert_includes out, 'Testing connection…'
+        end
+        assert_equal 'Bearer oauth-access', api.requests.last[:authorization]
+        assert_match(%r{application/x-www-form-urlencoded}, api.requests.first[:content_type])
+        form = URI.decode_www_form(api.requests.first[:body]).to_h
+        assert_equal 'public-client', form['client_id']
+        refute form.key?('client_secret')
+        assert_equal 'oauth', Buzzsprout::Config.loaded[:auth_method]
+        assert_nil Buzzsprout::Config.loaded[:api_token]
+        assert_equal 10, Buzzsprout::Config.saved_podcast_id
+        status, out, err = run_cli(['status', '--json'])
+        assert_equal 0, status, err
+        assert_equal 'oauth', JSON.parse(out)['auth_method']
+        refute_includes out, 'oauth-access'
+        refute_includes out, 'oauth-refresh'
+      ensure
+        api.shutdown
+      end
+    end
+  end
+  def test_oauth_retry_preserves_browser_option_and_accessible_default
+    with_config do
+      Buzzsprout::Config.save(api_token: 'old-token', default_podcast_id: 20)
+      api = FakeApi.new('/api/podcasts' => { body: [{ id: 10, title: 'First' }, { id: 20, title: 'Second' }] })
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      attempts = []
+      authorize = lambda do |**options|
+        attempts << options[:open_browser]
+        raise 'Temporary connection failure' if attempts.size == 1
+        { access_token: 'new-token', api_base: api.base }
+      end
+      begin
+        Buzzsprout::OAuth.stub(:authorize, authorize) do
+          status, out, err = run_cli(['login', '--no-browser', '--no-skills'], tty: true, stdin_data: "y\n\r")
+          assert_equal 0, status, err
+          assert_includes out, 'Retry browser login?'
+          assert_includes err, 'Temporary connection failure'
+        end
+        assert_equal [false, false], attempts
+        assert_equal 20, Buzzsprout::Config.saved_podcast_id
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_oauth_failed_noninteractive_login_keeps_existing_credentials
+    with_config do
+      Buzzsprout::Config.save(api_token: 'old-token', default_podcast_id: 20)
+      ENV['BUZZSPROUT_NONINTERACTIVE'] = '1'
+      Buzzsprout::OAuth.stub(:authorize, ->(**) { raise 'Connection failed' }) do
+        status, out, = run_cli(['login', '--no-skills'], tty: true)
+        assert_equal 1, status
+        refute_includes out, 'Retry browser login?'
+      end
+      assert_equal 'old-token', Buzzsprout::Config.token
+      assert_equal 20, Buzzsprout::Config.saved_podcast_id
+    end
+  end
+
   def test_contributor_headshots_on_create_and_update
     with_config do
       Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
@@ -372,7 +449,7 @@ class CLITest < Buzzsprout::Test
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
-        status, out, err = run_cli(['login', '--no-animation'], stdin_data: "super-secret-token\n")
+        status, out, err = run_cli(['login', '--api-token', '--no-animation'], stdin_data: "super-secret-token\n")
         assert_equal 0, status, err
         assert_match(/\n\nAuthentication Successful\n/, out)
         assert_match(/Life Empowerment/, out)
@@ -408,7 +485,7 @@ class CLITest < Buzzsprout::Test
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
-        status, out, err = run_cli(['login', '--token', 'ok'])
+        status, out, err = run_cli(['login', '--api-token', '--token', 'ok'])
         assert_equal 0, status, err
         assert_match(/\n\nAuthentication Successful\n/, out)
         refute_match(/You're in/, out)
@@ -446,7 +523,7 @@ class CLITest < Buzzsprout::Test
       api = FakeApi.new('/api/podcasts' => { status: 401, body: 'Invalid token' })
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
-        status, out, err = run_cli(['login', '--no-animation', '--token', 'bad'], stdin_data: '')
+        status, out, err = run_cli(['login', '--api-token', '--no-animation', '--token', 'bad'], stdin_data: '')
         assert_equal 1, status
         assert_match(/401/, err)
         refute_match(/Authentication Successful/, out)
@@ -491,7 +568,7 @@ class CLITest < Buzzsprout::Test
     with_config do
       Buzzsprout::Config.save(api_token: 'ok')
       api = FakeApi.new(
-        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_plays: 0 }] }
+        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_downloads: 0 }] }
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
@@ -499,7 +576,28 @@ class CLITest < Buzzsprout::Test
         assert_equal 0, status, err
         assert_match(/Pilot/, out)
         assert_match(/private/, out)
+        assert_includes out, "downloads: 0"
         refute api.requests.any? { |req| req[:path] == '/api/podcasts' }
+      ensure
+        api.shutdown
+      end
+    end
+  end
+
+  def test_episode_show_displays_total_downloads
+    with_config do
+      Buzzsprout::Config.save(api_token: 'ok')
+      api = FakeApi.new(
+        '/api/10/episodes/7' => { status: 200, body: { id: 7, title: 'Pilot', total_downloads: 123 } }
+      )
+      ENV['BUZZSPROUT_API_BASE'] = api.base
+      begin
+        status, out, err = run_cli(['episodes', 'show', '10', '7'])
+        assert_equal 0, status, err
+        assert_match(/total_downloads\s+123/, out)
+        status, out, err = run_cli(['episodes', 'show', '10', '7', '--json'])
+        assert_equal 0, status, err
+        assert_equal 123, JSON.parse(out)['total_downloads']
       ensure
         api.shutdown
       end
@@ -510,8 +608,8 @@ class CLITest < Buzzsprout::Test
     with_config do
       Buzzsprout::Config.save(api_token: 'ok')
       api = FakeApi.new(
-        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_plays: 0 }] },
-        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_plays: 3 }] }
+        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_downloads: 0 }] },
+        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_downloads: 3 }] }
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
@@ -542,7 +640,7 @@ class CLITest < Buzzsprout::Test
             { id: 20, title: 'Youth Podcast' }
           ]
         },
-        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_plays: 1 }] }
+        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_downloads: 1 }] }
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
@@ -566,7 +664,7 @@ class CLITest < Buzzsprout::Test
     with_config do
       Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
       api = FakeApi.new(
-        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_plays: 0 }] }
+        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_downloads: 0 }] }
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
@@ -593,7 +691,7 @@ class CLITest < Buzzsprout::Test
             { id: 20, title: 'Youth Podcast' }
           ]
         },
-        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_plays: 1 }] }
+        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_downloads: 1 }] }
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
@@ -625,7 +723,7 @@ class CLITest < Buzzsprout::Test
             { id: 20, title: 'Youth Podcast' }
           ]
         },
-        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_plays: 1 }] }
+        '/api/20/episodes' => { status: 200, body: [{ id: 8, title: 'Youth ep', private: false, total_downloads: 1 }] }
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
@@ -654,7 +752,7 @@ class CLITest < Buzzsprout::Test
     with_config do
       Buzzsprout::Config.save(api_token: 'ok', default_podcast_id: 10)
       api = FakeApi.new(
-        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_plays: 0 }] }
+        '/api/10/episodes' => { status: 200, body: [{ id: 7, title: 'Pilot', private: true, total_downloads: 0 }] }
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
@@ -756,7 +854,7 @@ class CLITest < Buzzsprout::Test
       )
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
-        status, out, err = run_cli(['login', '--no-animation', '--no-skills'], tty: true, stdin_data: "super-secret-token\n\e[B\r")
+        status, out, err = run_cli(['login', '--api-token', '--no-animation', '--no-skills'], tty: true, stdin_data: "super-secret-token\n\e[B\r")
         assert_equal 0, status, err
         assert_match(/\n\nAuthentication Successful\n/, out)
         assert_match(/Select a podcast/, out)
@@ -772,7 +870,7 @@ class CLITest < Buzzsprout::Test
   end
 
   def test_login_help_mentions_skills_flags
-    status, out, err = run_cli(['login', '--help'])
+    status, out, err = run_cli(['login', '--api-token', '--help'])
     assert_equal 0, status, err
     assert_match(/--install-skills/, out)
     assert_match(/--no-skills/, out)
@@ -787,7 +885,7 @@ class CLITest < Buzzsprout::Test
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
         status, out, err = run_cli(
-          ['login', '--no-animation'],
+          ['login', '--api-token', '--no-animation'],
           tty: true,
           stdin_data: "super-secret-token\n\n"
         )
@@ -809,7 +907,7 @@ class CLITest < Buzzsprout::Test
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
         status, out, err = run_cli(
-          ['login', '--no-animation', '--token', 'ok'],
+          ['login', '--api-token', '--no-animation', '--token', 'ok'],
           tty: true,
           stdin_data: "y\n"
         )
@@ -831,7 +929,7 @@ class CLITest < Buzzsprout::Test
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
         status, out, err = run_cli(
-          ['login', '--no-animation', '--token', 'ok'],
+          ['login', '--api-token', '--no-animation', '--token', 'ok'],
           tty: true,
           stdin_data: "n\n"
         )
@@ -855,7 +953,7 @@ class CLITest < Buzzsprout::Test
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
         status, out, err = run_cli(
-          ['login', '--no-animation', '--token', 'ok'],
+          ['login', '--api-token', '--no-animation', '--token', 'ok'],
           tty: true,
           stdin_data: "n\n"
         )
@@ -878,7 +976,7 @@ class CLITest < Buzzsprout::Test
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
         status, out, err = run_cli(
-          ['login', '--no-animation', '--token', 'ok'],
+          ['login', '--api-token', '--no-animation', '--token', 'ok'],
           tty: true,
           stdin_data: "\n"
         )
@@ -900,7 +998,7 @@ class CLITest < Buzzsprout::Test
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
         status, out, err = run_cli(
-          ['login', '--no-animation', '--json', '--token', 'ok'],
+          ['login', '--api-token', '--no-animation', '--json', '--token', 'ok'],
           tty: true,
           stdin_data: "\n"
         )
@@ -921,7 +1019,7 @@ class CLITest < Buzzsprout::Test
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
         status, out, err = run_cli(
-          ['login', '--no-animation', '--no-skills', '--token', 'ok'],
+          ['login', '--api-token', '--no-animation', '--no-skills', '--token', 'ok'],
           tty: true,
           stdin_data: "y\n"
         )
@@ -944,7 +1042,7 @@ class CLITest < Buzzsprout::Test
       ENV['BUZZSPROUT_API_BASE'] = api.base
       begin
         status, out, err = run_cli(
-          ['login', '--no-animation', '--install-skills', '--dir', dest, '--token', 'ok']
+          ['login', '--api-token', '--no-animation', '--install-skills', '--dir', dest, '--token', 'ok']
         )
         assert_equal 0, status, err
         refute_match(/Install agent skills now/, out)
@@ -1004,7 +1102,7 @@ class CLITest < Buzzsprout::Test
       status, out, err = run_cli(['status'])
       assert_equal 0, status, err
       assert_match(/Authenticated/, out)
-      assert_match(/Token\s+set/, out)
+      assert_match(/Method\s+API token/, out)
       refute_match(/super-secret-token/, out)
     end
   end
@@ -1149,6 +1247,6 @@ class CLITest < Buzzsprout::Test
 
   def skills_present?(dir = @skills_dir)
     File.file?(File.join(dir, 'buzzsprout', 'SKILL.md')) &&
-      File.file?(File.join(dir, 'podcasts', 'SKILL.md'))
+      File.file?(File.join(dir, 'buzzsprout-podcasts', 'SKILL.md'))
   end
 end

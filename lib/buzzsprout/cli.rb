@@ -7,6 +7,7 @@ require_relative 'redact'
 require_relative 'color'
 require_relative 'options'
 require_relative 'client'
+require_relative 'oauth'
 require_relative 'formatter'
 require_relative 'animation'
 require_relative 'podcast_picker'
@@ -27,6 +28,8 @@ require_relative 'commands/podrolls'
 require_relative 'commands/feed_verifications'
 require_relative 'commands/fan_mail'
 require_relative 'commands/skills'
+require_relative 'updater'
+require_relative 'commands/update'
 
 module Buzzsprout
   class CLI
@@ -36,10 +39,11 @@ module Buzzsprout
       Usage: buzzsprout [command] [args] [options]
 
       First run / auth
-        login, auth, init     Logo animation, prompt for API token, test GET /podcasts
+        login, auth, init     Connect in your browser; --api-token for token login
                               After success, may offer to install agent skills
         logout                Remove ~/.buzzsprout.json
         status, whoami        Show whether a token is saved
+        update [--check]     Update the CLI and agent skills, or check for updates
 
       Podcasts & episodes
         podcasts [list]
@@ -88,9 +92,10 @@ module Buzzsprout
         BUZZSPROUT_PODCAST_ID Explicit podcast id (skips the picker)
         BUZZSPROUT_NONINTERACTIVE=1  Never open the podcast picker or skills prompt
         BUZZSPROUT_CONFIG     Config path (default ~/.buzzsprout.json)
-        BUZZSPROUT_SKILLS_DIR Skills install destination (default ~/.cursor/skills)
+        BUZZSPROUT_SKILLS_DIR Override detected agent skills directories
         BUZZSPROUT_API_BASE   API base (default https://www.buzzsprout.com/api)
         BUZZSPROUT_NO_ANIMATION=1
+        BUZZSPROUT_NO_UPDATE_CHECK=1  Disable automatic update checks
         BUZZSPROUT_THEME      dark|light (intro contrast; auto-detects otherwise)
         NO_COLOR              Disable ANSI color
     HELP
@@ -129,7 +134,8 @@ module Buzzsprout
       'insertion_points' => Commands::InsertionPoints,
       'soundbites' => Commands::Soundbites,
       'soundbite' => Commands::Soundbites,
-      'skills' => Commands::Skills
+      'skills' => Commands::Skills,
+      'update' => Commands::Update
     }.freeze
 
     def initialize(io: $stdout, err: $stderr, stdin: $stdin)
@@ -179,6 +185,8 @@ module Buzzsprout
     rescue StandardError => e
       @err.puts "Error: #{Redact.string(e.message)}"
       1
+    ensure
+      Updater.new.notify(io: @err) unless argv.include?('update') || argv.include?('--dry-run')
     end
 
     private

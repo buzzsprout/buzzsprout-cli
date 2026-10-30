@@ -2,6 +2,7 @@
 
 require 'json'
 require 'fileutils'
+require 'tempfile'
 
 module Buzzsprout
   class Config
@@ -35,20 +36,45 @@ module Buzzsprout
       end
 
       def save(config)
+        return with_lock { clear_cache; save(config) } unless Thread.current[:buzzsprout_config_locked]
+
         merged = loaded.merge(config.transform_keys(&:to_sym))
         merged.delete_if { |_, value| value.nil? || value == '' }
         dir = File.dirname(config_file)
         FileUtils.mkdir_p(dir)
-        File.write(config_file, JSON.pretty_generate(merged))
-        chmod_private!(config_file)
+        Tempfile.create(['buzzsprout', '.json'], dir) do |file|
+          file.chmod(0o600)
+          file.write(JSON.pretty_generate(merged))
+          file.flush
+          file.fsync
+          File.rename(file.path, config_file)
+        end
+        @token = nil
         @config = merged
       end
 
+      def with_lock
+        FileUtils.mkdir_p(File.dirname(config_file))
+        File.open("#{config_file}.lock", File::RDWR | File::CREAT, 0o600) do |lock|
+          lock.flock(File::LOCK_EX)
+          Thread.current[:buzzsprout_config_locked] = true
+          yield
+        ensure
+          Thread.current[:buzzsprout_config_locked] = false
+          lock.flock(File::LOCK_UN)
+        end
+      end
+
+      def oauth?
+        ENV['BUZZSPROUT_API_TOKEN'].to_s.empty? && loaded[:auth_method] == 'oauth'
+      end
+
       def configured?
-        !token.to_s.empty?
+        oauth? ? loaded.dig(:oauth, :api_base) == api_base_url : !token.to_s.empty?
       end
 
       def token
+        return loaded.dig(:oauth, :access_token) if oauth?
         return @token if @token
 
         env = ENV['BUZZSPROUT_API_TOKEN']
@@ -71,6 +97,7 @@ module Buzzsprout
       end
 
       def require_token!
+        return OAuth.access_token if oauth?
         return token if configured?
 
         raise "Not authenticated. Run 'buzzsprout login' first (or set BUZZSPROUT_API_TOKEN)."

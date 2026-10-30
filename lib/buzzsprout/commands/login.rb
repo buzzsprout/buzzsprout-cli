@@ -7,15 +7,17 @@ module Buzzsprout
     class Login < Base
       USAGE = 'buzzsprout login [--no-animation] [--install-skills|--no-skills]'
       HELP_PAGE = {
-        summary: 'Authenticate with a Buzzsprout API token.',
+        summary: 'Connect your Buzzsprout account in your browser.',
         usage: 'buzzsprout login [--no-animation] [--install-skills|--no-skills]',
         aliases: %w[login auth init],
         flags: [
+          ['--api-token', 'Use the API token prompt instead of browser login'],
+          ['--no-browser', 'Print the authorization link without opening a browser'],
           ['--token TOKEN', 'Avoid: visible in process list and shell history. Prefer the prompt or BUZZSPROUT_API_TOKEN'],
           ['--no-animation', 'Skip the intro animation'],
           ['--install-skills', 'Install agent skills after login without prompting'],
           ['--no-skills', 'Skip the skills install prompt (--skip-skills)'],
-          ['--dir PATH', 'Skills install destination (default ~/.cursor/skills)']
+          ['--dir PATH', 'Override detected agent skills directories']
         ],
         examples: [
           'buzzsprout login',
@@ -25,6 +27,9 @@ module Buzzsprout
       }.freeze
 
       def run
+        token_login = @args.delete('--api-token') || @options.token || !ENV['BUZZSPROUT_API_TOKEN'].to_s.empty?
+        return oauth_login unless token_login
+
         play_intro
         say_hello
 
@@ -60,17 +65,51 @@ module Buzzsprout
 
       private
 
+      def oauth_login
+        raise 'Login cannot run with --dry-run.' if @options.dry_run?
+        play_intro
+        say_hello(oauth: true)
+        open_browser = !@args.delete('--no-browser')
+        credentials = podcasts = nil
+        loop do
+          begin
+            credentials = OAuth.authorize(io: @io, open_browser: open_browser)
+            @io.puts 'Testing connection…'
+            @io.puts Color.dim("GET #{Config.api_base_url}/podcasts", io: @io)
+            podcasts = Client.new(token: credentials[:access_token], auth_scheme: 'Bearer').get('/podcasts') || []
+            break
+          rescue StandardError => e
+            @err.puts Color.red("Could not connect: #{e.message}", io: @err)
+            return 1 unless retry?(prompt: 'Retry browser login? [Y/n] ')
+          end
+        end
+        Config.with_lock do
+          Config.clear_cache
+          list = PodcastPicker.wrap_list(podcasts)
+          saved_id = Config.saved_podcast_id
+          saved_id = nil unless list.any? { |podcast| podcast['id'].to_s == saved_id.to_s }
+          default_id = @options.podcast_id || ENV['BUZZSPROUT_PODCAST_ID'] || saved_id || (list.first['id'] if list.size == 1)
+          Config.save(auth_method: 'oauth', oauth: credentials, api_token: nil, token: nil, default_podcast_id: default_id, podcast_id: nil)
+        end
+        celebrate(podcasts)
+        0
+      end
+
       def play_intro
         return if @options.no_animation?
 
         Animation.new(io: @io).play
       end
 
-      def say_hello
+      def say_hello(oauth: false)
         @io.puts Color.bold('Welcome to the Buzzsprout CLI', io: @io)
         @io.puts '=' * 40
-        @io.puts 'Authenticate with the token from Profile → API.'
-        @io.puts Color.dim('Tip: set BUZZSPROUT_API_TOKEN in the environment instead of pasting on argv.', io: @io)
+        if oauth
+          @io.puts 'Sign in to Buzzsprout in your browser to connect your account.'
+        else
+          @io.puts 'Authenticate with the token from Profile → API.'
+          @io.puts Color.dim('Tip: set BUZZSPROUT_API_TOKEN in the environment instead of pasting on argv.', io: @io)
+        end
         @io.puts ''
       end
 
@@ -96,7 +135,7 @@ module Buzzsprout
       end
 
       def persist(token, podcasts)
-        config = { api_token: token }
+        config = { api_token: token, auth_method: 'api_token', oauth: nil }
         list = PodcastPicker.wrap_list(podcasts)
         if (explicit = @options.podcast_id || ENV['BUZZSPROUT_PODCAST_ID'])
           config[:default_podcast_id] = explicit
@@ -165,17 +204,23 @@ module Buzzsprout
       def offer_skills_install
         return if @options.dry_run?
 
-        dest = Skills.destination_dir(@options.dir)
+        destinations = Skills.destination_dirs(@options.dir)
+        if destinations.empty?
+          @io.puts 'To install agent skills, run: buzzsprout skills install --dir PATH' unless @options.skip_skills?
+          return
+        end
         if @options.install_skills?
           @io.puts ''
-          Skills.install_into!(dest, io: @io)
+          destinations.each { |dest| Skills.install_into!(dest, io: @io) }
           return
         end
         return if @options.skip_skills?
-        return if Skills.installed?(dest)
+        return if destinations.all? { |dest| Skills.installed?(dest) }
         return unless interactive_skills_prompt?
 
         @io.puts ''
+        @io.puts 'Install or refresh skills in:'
+        destinations.each { |dest| @io.puts "  #{dest}" }
         @io.print 'Install agent skills now? [Y/n] '
         @io.flush if @io.respond_to?(:flush)
         answer = @stdin.gets.to_s.strip
@@ -184,7 +229,7 @@ module Buzzsprout
           return
         end
 
-        Skills.install_into!(dest, io: @io)
+        destinations.each { |dest| Skills.install_into!(dest, io: @io) }
       end
 
       def interactive_skills_prompt?
@@ -203,12 +248,13 @@ module Buzzsprout
         @io.puts ''
       end
 
-      def retry?
+      def retry?(prompt: 'Retry / re-enter token? [Y/n] ')
+        return false if ENV['BUZZSPROUT_NONINTERACTIVE'] == '1' || @options.json?
         unless @stdin.respond_to?(:tty?) && @stdin.tty?
           return false
         end
 
-        @io.print 'Retry / re-enter token? [Y/n] '
+        @io.print prompt
         answer = @stdin.gets.to_s.strip
         answer.empty? || %w[y yes].include?(answer.downcase)
       end

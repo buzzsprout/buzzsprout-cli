@@ -66,7 +66,9 @@ module Buzzsprout
 
       def client
         @client ||= Client.new(
-          token: Config.require_token!,
+          token: @options.dry_run? ? Config.token : Config.require_token!,
+          auth_scheme: Config.oauth? ? 'Bearer' : 'Token',
+          token_provider: Config.oauth? ? -> { OAuth.access_token } : nil,
           dry_run: @options.dry_run?,
           io: @err
         )

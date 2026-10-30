@@ -41,8 +41,10 @@ module Buzzsprout
       end
     end
 
-    def initialize(token:, base_url: nil, dry_run: false, transport: nil, io: $stderr)
+    def initialize(token:, auth_scheme: 'Token', token_provider: nil, base_url: nil, dry_run: false, transport: nil, io: $stderr)
       @token = token
+      @auth_scheme = auth_scheme
+      @token_provider = token_provider
       @base_url = (base_url || Config.api_base_url).to_s.chomp('/')
       @dry_run = dry_run
       @transport = transport
@@ -91,6 +93,7 @@ module Buzzsprout
       end
 
       retries = 0
+      retried_rotated_token = false
       loop do
         req_headers = default_headers
         req_headers['Content-Type'] = 'application/json; charset=utf-8' if body && multipart.nil?
@@ -113,6 +116,15 @@ module Buzzsprout
         end
 
         raw = transport.request(method, uri, req_headers, encoded_body)
+
+        if raw.status == 401 && @token_provider && !retried_rotated_token
+          latest_token = @token_provider.call
+          if latest_token != @token
+            retried_rotated_token = true
+            @token = latest_token
+            next
+          end
+        end
 
         if raw.status == 429 && retries < MAX_RETRIES
           retries += 1
@@ -150,8 +162,9 @@ module Buzzsprout
     end
 
     def default_headers
+      @token = @token_provider.call if @token_provider
       {
-        'Authorization' => "Token token=#{@token}",
+        'Authorization' => @auth_scheme == 'Bearer' ? "Bearer #{@token}" : "Token token=#{@token}",
         'User-Agent' => USER_AGENT,
         'Accept' => 'application/json'
       }
@@ -225,7 +238,7 @@ module Buzzsprout
 
     def print_dry_run(method, uri, body, multipart)
       @io.puts Redact.string("[dry-run] #{method.to_s.upcase} #{Redact.uri(uri, known: @token)}", known: @token)
-      @io.puts "[dry-run] Authorization: Token token=#{Redact::PLACEHOLDER}"
+      @io.puts "[dry-run] Authorization: #{@auth_scheme == 'Bearer' ? 'Bearer ' : 'Token token='}#{Redact::PLACEHOLDER}"
       @io.puts "[dry-run] User-Agent: #{USER_AGENT}"
       if body
         payload = body.is_a?(String) ? body : JSON.pretty_generate(body)

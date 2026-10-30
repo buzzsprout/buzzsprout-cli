@@ -7,7 +7,7 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 ## Features
 
 - **First run** — braille startup animation of the Buzzsprout mark + wordmark (embedded in the CLI source), token prompt, live `GET /api/podcasts`, celebration, token saved to `~/.buzzsprout.json`
-- **Token auth** — `Authorization: Token token=…` from **Profile → API** (not OAuth)
+- **Browser login** — OAuth with automatic refresh; API tokens remain supported for scripts
 - **Identifiable User-Agent** — `BuzzsproutCLI/0.1.0` on every request
 - **Rate limits** — 60 req/min; retries `429` with backoff
 - **ETags** — sends `If-None-Match` on repeat GETs
@@ -15,53 +15,47 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 
 ## Installation
 
-Ruby 3.0+ is required. This GitHub repo is **private**: unauthenticated `raw.githubusercontent.com` (and the public API) **404**. Clone with your existing GitHub credentials, then run the installer.
+On macOS or Linux, install Ruby 3.0+ and Git, then run:
 
 ```bash
-git clone --depth 1 https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
+curl -fsSL https://raw.githubusercontent.com/buzzsprout/buzzsprout-cli/main/script/install | bash
+buzzsprout login
+```
+
+The repository is public; no GitHub account is required. The installer clones into `~/.buzzsprout-cli` and links `buzzsprout` into `~/.local/bin` (or `~/bin` if already on PATH). Follow any PATH instructions it prints. It does not use `sudo`. On Windows, use WSL with Ruby and Git installed.
+
+To inspect the code before installing:
+
+```bash
+git clone https://github.com/buzzsprout/buzzsprout-cli.git ~/.buzzsprout-cli
 ~/.buzzsprout-cli/script/install
 buzzsprout login
 ```
 
-SSH:
+If you already have a checkout, run `./script/install` from its root.
+
+### Updating
 
 ```bash
-git clone --depth 1 git@github.com:higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
-~/.buzzsprout-cli/script/install
-buzzsprout login
+buzzsprout update                  # update CLI and refresh agent skills
+buzzsprout update --check          # check without installing
+buzzsprout update --check --json   # machine-readable check for AI assistants
 ```
 
-If you already have a checkout: `./script/install` from the repo root. The script checks for Ruby 3.0+ and symlinks `bin/buzzsprout` to `~/.local/bin` (or `~/bin` if that directory is already on PATH). It does not `sudo`. If `~/.buzzsprout-cli` already exists and is this repo, run the install script from that clone instead of cloning again.
+Updates follow `main`, so changes to commands, the public OAuth client ID, and skills are detected even when the version number hasn't changed. The updater only fast-forwards clean installations of the official repository on `main`; it refuses local edits, other branches, and divergent history. Your login and saved podcast are preserved. Gem installations should use `gem update buzzsprout-cli` instead.
 
-A specific branch (until this lands on `main`, use the PR branch):
+Skills refresh in detected Claude Code and Cursor directories, or the destination selected by `BUZZSPROUT_SKILLS_DIR` / `--dir`. For a custom location, run `buzzsprout update --dir PATH`. Previous skill copies are backed up. Start a new AI session after refreshing skills. If the skill refresh fails, the CLI update remains installed and the command reports how to retry.
 
-```bash
-git clone --depth 1 -b cursor/buzzsprout-cli-3c1e https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
-~/.buzzsprout-cli/script/install
-buzzsprout login
-```
+Normal commands check GitHub at most once a day and print update notices on stderr, preserving JSON stdout. Checks have a three-second network timeout; offline or rate-limited checks do not fail the command. Automatic checks are skipped in CI, for development/dirty checkouts, and when `BUZZSPROUT_NO_UPDATE_CHECK=1`. Explicit `update --check` always requests a fresh result. Nothing updates automatically.
 
-Authenticated one-liner if you have [`gh`](https://cli.github.com/) logged in (`gh auth status`). Quote the path so `?ref=` is not eaten by the shell. The piped script still `git clone`s, so GitHub git credentials (HTTPS or SSH) are required too:
+Older installations without the update command can be updated from a clean `main` checkout with `git pull --ff-only`, then `./script/install` and `buzzsprout skills install`.
 
-```bash
-gh api "repos/higher-pixels/buzzsprout-cli/contents/script/install?ref=main" --jq .content | base64 --decode | bash
-```
-
-Match `ref=` with `BUZZSPROUT_CLI_REF` when installing a non-default branch. Use `BUZZSPROUT_CLI_REPO=git@github.com:higher-pixels/buzzsprout-cli.git` if your `gh` is authenticated but `git clone` over HTTPS is not.
-
-If this repo is ever public, unauthenticated raw curl would work. **While it is private, that URL 404s:**
-
-```bash
-# 404 while the repo is private — do not use this as the primary install
-curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
-```
-
-Optional overrides: `BUZZSPROUT_CLI_HOME` (clone dir), `BUZZSPROUT_CLI_BIN` (where the executable goes), `BUZZSPROUT_CLI_REPO` (git remote), `BUZZSPROUT_CLI_REF` (branch or tag, default `main`).
+Installer overrides: `BUZZSPROUT_CLI_HOME` (clone directory), `BUZZSPROUT_CLI_BIN` (executable directory), `BUZZSPROUT_CLI_REPO` (Git remote), and `BUZZSPROUT_CLI_REF` (branch or tag, default `main`).
 
 ### From source
 
 ```bash
-git clone https://github.com/higher-pixels/buzzsprout-cli.git
+git clone https://github.com/buzzsprout/buzzsprout-cli.git
 cd buzzsprout-cli
 bundle install
 ```
@@ -70,50 +64,31 @@ Then either:
 
 - Run directly: `./bin/buzzsprout`
 - Add to PATH: `export PATH="$PATH:/path/to/buzzsprout-cli/bin"`
-- Install as a gem: `rake install` or `./script/install`
+- Install as a gem: `rake install`
+- Link this checkout onto PATH: `./script/install`
 
 ## First run
 
-With no config yet, `buzzsprout` (or `buzzsprout login`) will:
+Run `buzzsprout login` to connect your account:
 
-1. Play a short braille animation of the Buzzsprout logo (sprout/bolt grows, then the “Buzzsprout” wordmark wipes in). The finale stays on screen while auth continues below it. The art is a constant in the Ruby source — no image files in the repo. On dark terminals the bolt and wordmark use bright green `#61D752`; on light terminals the wordmark stays dark `#214538`. Override with `BUZZSPROUT_THEME=dark` or `light` (`NO_COLOR` still disables color).
-2. Prompt for your API token (**Profile → API** in Buzzsprout)
-3. Test the connection:
+1. The CLI prints an authorization link and opens it in your browser.
+2. Sign in to Buzzsprout and approve access. Use a browser on the same computer as the CLI.
+3. Return to the terminal. The CLI checks the connection, saves your credentials privately, and helps you choose a default podcast.
+4. If agent skills are not installed, the CLI offers to install them. Use `--install-skills` to install without prompting or `--no-skills` to skip.
 
-   ```http
-   GET https://www.buzzsprout.com/api/podcasts
-   Authorization: Token token=YOUR_API_TOKEN
-   User-Agent: BuzzsproutCLI/0.1.0
-   Accept: application/json
-   ```
-
-4. On success: a blank line, then **Authentication Successful** in the logo green `#61D752` (`NO_COLOR` / non-TTY: plain text), then **pick a podcast** if you have more than one (arrow keys, type to search, Enter), and save the token to `~/.buzzsprout.json` (mode `0600`)
-5. If agent skills are not already installed, offer **Install agent skills now? [Y/n]** (default yes). Skipped when skills are already present, `--no-skills` / `--skip-skills`, `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or no TTY. `buzzsprout login --install-skills` copies them without prompting.
-6. On failure: print a clear error and offer to retry / re-enter the token
-
-```bash
-buzzsprout login
-buzzsprout login --no-animation
-buzzsprout login --install-skills
-buzzsprout login --no-skills
-```
-
-Skip the animation with `--no-animation` or `BUZZSPROUT_NO_ANIMATION=1`. Prefer `BUZZSPROUT_API_TOKEN` in the environment over `--token` (process list / history).
+Use `buzzsprout login --no-browser` to open the printed link yourself. Authorization times out after five minutes; rerun login if needed.
 
 ## Authentication
 
-The CLI sends the token only as `Authorization: Token token=…` (never as `?api_token=`). It never prints the raw token (including `--json`, `--dry-run`, `status` / `whoami`, and error text). Dry-run shows `Token token=[REDACTED]`.
+OAuth access tokens refresh automatically. If the connection has been revoked or cannot be refreshed, run `buzzsprout login` again. Failed login attempts leave existing saved credentials intact.
 
-**Agents:** do not read `~/.buzzsprout.json` for the token value. Do not print or echo `BUZZSPROUT_API_TOKEN`. Authenticate with `buzzsprout login` or assume the env/config is already set, then use `buzzsprout` instead of constructing curl with a real token in chat.
+Existing API-token configurations continue to work. For token login, run `buzzsprout login --api-token` and enter your token from **Profile → API** at the hidden prompt. `BUZZSPROUT_API_TOKEN` takes precedence over saved credentials, including OAuth. It also selects token authentication when running login. This remains useful for scripts or remote sessions where browser callbacks cannot reach the CLI.
 
-| Source | Notes |
-| --- | --- |
-| Interactive `buzzsprout login` | TTY prompt uses `noecho`; preferred |
-| `BUZZSPROUT_API_TOKEN` | Env override; never print or commit this |
-| `~/.buzzsprout.json` | Written by `buzzsprout login` (mode `0600` on Unix; Windows keeps the creating user's default ACL) |
-| `--token` | Login only; can leak via process list and shell history — avoid |
+Credentials are saved in `~/.buzzsprout.json` with mode `0600` on Unix. Never copy this file into a chat or commit it. Tokens are redacted from status, dry-run output, and API errors. `status` shows the active authentication method.
 
-The config file stores `api_token` and `default_podcast_id`. Do not open it to copy the secret into a transcript.
+`buzzsprout logout` revokes the saved OAuth connection and removes local credentials and the default podcast. `--local-only` removes only the local copy; you can disconnect the app from your Buzzsprout profile. API-token logout only removes the saved token; an environment variable remains active until you unset it.
+
+**Agents:** do not read the credential file or print `BUZZSPROUT_API_TOKEN`. Use the authenticated CLI instead of constructing requests with real tokens.
 
 ```bash
 buzzsprout status                 # token_set: true — never the secret
@@ -219,7 +194,7 @@ buzzsprout skills path
 buzzsprout skills install --dir ~/.cursor/skills
 ```
 
-`buzzsprout login` offers the same install (default `~/.cursor/skills`, or `BUZZSPROUT_SKILLS_DIR` / `--dir`) when those skill folders are missing. Copy or symlink into whatever directory your agent already loads (`~/.cursor/skills`, `~/.claude/skills`, `.cursor/skills` in a project). Details: [skills/README.md](skills/README.md).
+`buzzsprout skills install` installs or refreshes skills for detected Cursor and Claude Code installations (`~/.cursor` and `~/.claude`). Login offers the same installation when skills are missing or outdated. `BUZZSPROUT_SKILLS_DIR` or `--dir` selects a single destination instead. Resource folders use names such as `buzzsprout-stats`; previous Buzzsprout folders are archived beside the skills directory, and unrelated skills are preserved. Details: [skills/README.md](skills/README.md).
 
 ## Environment
 
@@ -229,9 +204,10 @@ buzzsprout skills install --dir ~/.cursor/skills
 | `BUZZSPROUT_PODCAST_ID` | Explicit podcast id for this process (skips the picker) |
 | `BUZZSPROUT_NONINTERACTIVE=1` | Never open the podcast picker or the post-login skills prompt |
 | `BUZZSPROUT_CONFIG` | Config path (default `~/.buzzsprout.json`) |
-| `BUZZSPROUT_SKILLS_DIR` | Skills install destination (default `~/.cursor/skills`) |
+| `BUZZSPROUT_SKILLS_DIR` | Override detected agent skills directories |
 | `BUZZSPROUT_API_BASE` | API base (default `https://www.buzzsprout.com/api`) |
 | `BUZZSPROUT_NO_ANIMATION=1` | Skip the intro |
+| `BUZZSPROUT_NO_UPDATE_CHECK=1` | Disable automatic update checks |
 | `BUZZSPROUT_THEME` | `dark` or `light` for the intro. If unset: `COLORFGBG`, then a best-effort OSC 11 query **only** on a raw TTY (skipped if that would leak). Otherwise **dark** (bright green `#61D752` for bolt + wordmark). Light terminals use `#214538` for the wordmark. |
 | `NO_COLOR` / `BUZZSPROUT_NO_COLOR` | Disable ANSI color |
 

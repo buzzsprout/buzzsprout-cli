@@ -14,17 +14,18 @@ Agent-friendly Ruby CLI for the Buzzsprout API. Prefer the `buzzsprout` executab
 
 ## Auth
 
-Token auth (not OAuth). The user gets a token under **Profile → API** in Buzzsprout. **You (the agent) must not load that secret into context.**
+Browser OAuth is the default: use `buzzsprout login`. API tokens remain supported through `buzzsprout login --api-token` or `BUZZSPROUT_API_TOKEN`. **You (the agent) must not load credentials into context.**
 
 ### Agent rules
 
+- Before changing podcast content, name the target podcast in your acknowledgment. Ask only if the target is unclear.
 - Never read `~/.buzzsprout.json` (or `BUZZSPROUT_CONFIG`) to copy `api_token` into chat, logs, or curl.
 - Never print, echo, or interpolate `BUZZSPROUT_API_TOKEN`.
-- Authenticate with `buzzsprout login` (TTY prompt, no echo) or assume env/config is already set.
+- Authenticate with `buzzsprout login` (browser authorization) or assume env/config is already set.
 - Prefer the `buzzsprout` CLI over constructing HTTP. If you must show a header shape, keep the placeholder `YOUR_API_TOKEN` — never a real token.
 - `buzzsprout status --json` reports `token_set: true` or `false`, not the secret. `--dry-run` prints `Token token=[REDACTED]`.
 
-The CLI sends `Authorization: Token token=…` on API calls (never `?api_token=`). Header shape for docs only:
+The CLI sends `Authorization: Bearer …` for OAuth and `Authorization: Token token=…` for API tokens (never `?api_token=`). API-token header shape for docs only:
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
@@ -35,7 +36,7 @@ Accept: application/json
 Resolution order inside the CLI (not for agents to read): env `BUZZSPROUT_API_TOKEN`, then the file written by `login`. `--token` on argv is login-only and can leak via process list/history — do not recommend it.
 
 ```bash
-buzzsprout login                  # animation → prompt → GET /podcasts → picker if 2+ shows → save
+buzzsprout login                  # browser authorization → GET /podcasts → picker → save
 buzzsprout login --no-animation
 buzzsprout login --install-skills # also copy agent skills (no prompt)
 buzzsprout login --no-skills      # skip the post-login skills offer
@@ -44,7 +45,16 @@ buzzsprout podcast use            # picker to change the saved podcast (or pass 
 buzzsprout logout
 ```
 
-First run with no args and no saved token starts login automatically. Config lives at `~/.buzzsprout.json` (mode `0600` on Unix). Do not open it for the token value. After auth succeeds, login may offer to install these skills into `~/.cursor/skills` (or `BUZZSPROUT_SKILLS_DIR` / `--dir`) unless they are already present.
+First run with no args and no saved token starts login automatically. Config lives at `~/.buzzsprout.json` (mode `0600` on Unix). Do not open it for token values. After auth succeeds, login offers to install or refresh these skills in detected Claude Code and Cursor directories, or the destination selected by `BUZZSPROUT_SKILLS_DIR` / `--dir`.
+
+## Updates
+
+- `buzzsprout update --check --json` checks whether the installed CLI differs from the latest `main`, without changing code or skills.
+- Normal commands may print an update notice on stderr; their JSON stdout remains unchanged. Tell the user when an update is available. Do not update software merely to answer a data question.
+- When the user requests an update, run `buzzsprout update`. This updates the CLI and refreshes skills in detected agent directories (or the explicit skills destination).
+- Start a new agent session after refreshing skills. Custom skill locations require `buzzsprout update --dir PATH` or a separate `buzzsprout skills install --dir PATH`.
+- Updates require a clean checkout of the official repository on `main`. Never reset local edits or switch a development branch to bypass a refusal.
+- Set `BUZZSPROUT_NO_UPDATE_CHECK=1` to disable automatic checks. An explicit `update --check` still works.
 
 ## Base URL
 
@@ -76,7 +86,7 @@ Extensionless paths are canonical; `.json` is also accepted by the API.
 | Episodes | `buzzsprout episodes` | `episodes` |
 | Uploads | `buzzsprout uploads` | `uploads` |
 | Stats | `buzzsprout downloads` | `stats` |
-| Team | `buzzsprout team` | `team` |
+| Team | Direct the user to sign in and use the web app | `team` |
 | Contributors | `buzzsprout contributors` | `contributors` |
 | Brand affiliations | `buzzsprout brand-affiliations` | `brand_affiliations` |
 | Chapters | `buzzsprout chapters` | `chapters` |

@@ -1,6 +1,6 @@
 # Skills for agents
 
-This directory contains Cursor-style skills for the Buzzsprout API. Each folder is a skill an agent can load: when to use it, the HTTP endpoints, required headers, example requests, and the matching `buzzsprout` CLI command.
+This directory contains agent skills for the Buzzsprout API. Each folder is a skill an agent can load: when to use it, the HTTP endpoints, required headers, example requests, and the matching `buzzsprout` CLI command.
 
 Layout matches [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli) (`skills/<name>/SKILL.md`), with **one skill per major resource** plus an overview skill.
 
@@ -25,41 +25,24 @@ Layout matches [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli) (`
 
 API shapes follow [buzzsprout/buzzsprout-api#56](https://github.com/buzzsprout/buzzsprout-api/pull/56).
 
-## Install / load into a common directory
-
-Skills are markdown. Copy or symlink the folders into the directory your agent already scans.
-
-After a successful `buzzsprout login`, the CLI offers to run the same install when the destination is empty (`Install agent skills now? [Y/n]`, default yes). Use `buzzsprout login --install-skills` to copy without prompting, or `--no-skills` / `--skip-skills` to skip. The prompt is also skipped when skills are already present, `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or stdin is not a TTY. Destination is `--dir`, else `BUZZSPROUT_SKILLS_DIR`, else `~/.cursor/skills`.
-
-### Cursor
-
-Project-local (preferred for this repo):
+## Install or refresh
 
 ```bash
-mkdir -p .cursor/skills
-cp -R skills/* .cursor/skills/
+buzzsprout skills install
 ```
 
-User-wide:
+Installs into `~/.cursor/skills` and `~/.claude/skills` when the corresponding agent directory exists. If neither exists, choose a directory explicitly. Local Claude Code reads these skills; Cowork and cloud sessions need skills configured separately in Claude.
 
 ```bash
-./bin/buzzsprout skills install --dir ~/.cursor/skills
-# or
-mkdir -p ~/.cursor/skills
-ln -s "$(pwd)/skills/"* ~/.cursor/skills/
+buzzsprout skills install --dir ~/.claude/skills
+buzzsprout skills install --dir .claude/skills
 ```
 
-The CLI prints the source path with `buzzsprout skills path`.
+`--dir` takes precedence over `BUZZSPROUT_SKILLS_DIR`; either overrides automatic detection. Login offers installation when any detected destination is missing skills or has outdated content. `--install-skills` refreshes without prompting; `--no-skills` skips the offer. Noninteractive and JSON login skip the prompt.
 
-### Claude Code / other agents
+Resource directories are namespaced, for example `buzzsprout-stats`. The overview remains `buzzsprout`. Previous owned folders, including old unprefixed installations, are archived in `buzzsprout-skill-backups` alongside the destination skills directory. Unrelated skills are preserved; conflicts in namespaced directories are reported instead of overwritten.
 
-```bash
-./bin/buzzsprout skills install --dir ~/.claude/skills
-# or any shared folder your agent is configured to load
-./bin/buzzsprout skills install --dir ~/.agents/skills
-```
-
-After install, tell the agent to load the `buzzsprout` skill first (auth + headers), then the resource skill for the task.
+Load the `buzzsprout` overview first, followed by the resource skill needed for the task. `buzzsprout skills path` prints the bundled source location.
 
 ## Conventions every skill assumes
 

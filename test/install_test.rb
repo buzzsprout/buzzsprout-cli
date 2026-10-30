@@ -12,21 +12,18 @@ class InstallTest < Buzzsprout::Test
     File.expand_path('..', __dir__)
   end
 
-  def test_readme_documents_private_repo_install
+  def test_readme_documents_public_repo_install_and_updates
     readme = File.read(File.expand_path('../README.md', __dir__))
-    assert_includes readme, 'git clone --depth 1 https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli'
+    assert_includes readme, 'git clone https://github.com/buzzsprout/buzzsprout-cli.git ~/.buzzsprout-cli'
     assert_includes readme, '~/.buzzsprout-cli/script/install'
     assert_includes readme, 'buzzsprout login'
-    assert_includes readme, 'git@github.com:higher-pixels/buzzsprout-cli.git'
-    assert_includes readme, 'gh api'
-    assert_match(/private/, readme)
-    assert_match(/404/, readme)
-    # Unauthenticated raw curl is documented only as a 404-while-private footnote.
-    curl_idx = readme.index('curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash')
-    clone_idx = readme.index('git clone --depth 1 https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli')
+    assert_includes readme, 'buzzsprout update --check --json'
+    assert_includes readme, 'no GitHub account is required'
+    curl_idx = readme.index('curl -fsSL https://raw.githubusercontent.com/buzzsprout/buzzsprout-cli/main/script/install | bash')
+    clone_idx = readme.index('git clone https://github.com/buzzsprout/buzzsprout-cli.git ~/.buzzsprout-cli')
     refute_nil curl_idx
     refute_nil clone_idx
-    assert_operator clone_idx, :<, curl_idx
+    assert_operator curl_idx, :<, clone_idx
   end
 
   def test_install_script_is_self_contained
@@ -36,6 +33,15 @@ class InstallTest < Buzzsprout::Test
     assert_includes text, 'BUZZSPROUT_CLI_REF'
     assert_includes text, 'ln -sfn'
     refute_match(/curl .*\| *bash/, text.split("\n").grep_v(/^\s*#/).join("\n"))
+  end
+
+  def test_installer_recognizes_existing_legacy_remote
+    definitions = File.read(script).split('BIN_DIR="$(pick_bin_dir)"').first
+    %w[https://github.com/higher-pixels/buzzsprout-cli.git git@github.com:higher-pixels/buzzsprout-cli.git https://github.com/buzzsprout/buzzsprout-cli.git].each do |remote|
+      out, err, status = Open3.capture3('bash', '-c', definitions + "\nnormalize_git_url \"$1\"\n", 'test', remote)
+      assert status.success?, err
+      assert_equal 'https://github.com/buzzsprout/buzzsprout-cli', out.strip
+    end
   end
 
   def test_install_from_local_checkout
@@ -66,7 +72,7 @@ class InstallTest < Buzzsprout::Test
       assert File.directory?(File.join(cache, '.git'))
       exe = File.join(bin, 'buzzsprout')
       assert File.executable?(exe), "missing #{exe}\n#{out}\n#{err}"
-      assert_equal File.join(cache, 'bin', 'buzzsprout'), File.realpath(exe)
+      assert_equal File.realpath(File.join(cache, 'bin', 'buzzsprout')), File.realpath(exe)
       version, = Open3.capture2(env, exe, 'version', chdir: home)
       assert_match(/0\.1\.0/, version)
     end
