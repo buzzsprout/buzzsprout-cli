@@ -19,7 +19,8 @@ module Buzzsprout
         ],
         examples: [
           'buzzsprout contributors',
-          'buzzsprout contributors create --name "Jane Doe" --role host'
+          'buzzsprout contributors create --name "Jane Doe" --role host --file ./headshot.jpg',
+          'buzzsprout contributors update 123 --file ./headshot.png'
         ]
       }.freeze
 
@@ -50,7 +51,7 @@ module Buzzsprout
         podcast_id = podcast_id_from_args!
         id = shift_id!('contributor_id')
         data = client.get("/#{podcast_id}/contributors/#{id}")
-        output(data) { @formatter.show_record("Contributor #{id}", data, %w[id name role bio url]) }
+        output(data) { @formatter.show_record("Contributor #{id}", data, %w[id name role bio url headshot_url]) }
         0
       end
 
@@ -59,7 +60,7 @@ module Buzzsprout
         body = @options.merge_body
         raise 'name is required' if body['name'].to_s.empty?
 
-        data = client.post("/#{podcast_id}/contributors", body: body)
+        data = write_contributor(:post, "/#{podcast_id}/contributors", body)
         output(data) { @io.puts "Created contributor #{data && data['id']}: #{data && data['name']}" }
         0
       end
@@ -67,9 +68,25 @@ module Buzzsprout
       def update
         podcast_id = podcast_id_from_args!
         id = shift_id!('contributor_id')
-        data = client.patch("/#{podcast_id}/contributors/#{id}", body: @options.merge_body)
+        data = write_contributor(:patch, "/#{podcast_id}/contributors/#{id}", @options.merge_body)
         output(data) { @io.puts "Updated contributor #{id}" }
         0
+      end
+
+      def write_contributor(method, path, body)
+        file = @options.file
+        return client.public_send(method, path, body: body) if file.nil?
+
+        raise 'Provide --file PATH' if file.empty?
+        raise "File not found: #{file}" unless File.file?(file)
+
+        content_type = { '.png' => 'image/png', '.jpg' => 'image/jpeg', '.jpeg' => 'image/jpeg', '.webp' => 'image/webp' }[File.extname(file).downcase]
+        raise 'Headshot must be a PNG, JPEG, or WebP file' unless content_type
+
+        parts = body.merge('headshot_file' => {
+          filename: File.basename(file), content_type: content_type, data: File.binread(file)
+        })
+        client.public_send(method, path, multipart: parts)
       end
 
       def delete
