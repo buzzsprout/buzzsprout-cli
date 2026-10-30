@@ -19,9 +19,16 @@ class OAuthTest < Buzzsprout::Test
         callback_thread = Thread.new do
           uri = URI(params['redirect_uri'])
           uri.query = URI.encode_www_form(code: 'one-time-code', state: 'wrong-state', iss: Buzzsprout::OAuth.issuer)
-          assert_equal '400', Net::HTTP.get_response(uri).code
+          invalid = Net::HTTP.get_response(uri)
+          assert_equal '400', invalid.code
+          assert_includes invalid.body.force_encoding(Encoding::UTF_8), 'That connection didn’t make it through.'
           uri.query = URI.encode_www_form(code: 'one-time-code', state: params['state'], iss: Buzzsprout::OAuth.issuer)
-          assert_equal '200', Net::HTTP.get_response(uri).code
+          response = Net::HTTP.get_response(uri)
+          assert_equal '200', response.code
+          assert_match %r{text/html}, response['Content-Type']
+          assert_includes response.body.force_encoding(Encoding::UTF_8), 'All systems go.'
+          assert_includes response.body.force_encoding(Encoding::UTF_8), 'finish connecting'
+          refute_includes response.body.force_encoding(Encoding::UTF_8), 'one-time-code'
         end
       end
       exchange = lambda do |params, server:|
@@ -52,9 +59,22 @@ class OAuthTest < Buzzsprout::Test
     end
     error = assert_raises(RuntimeError) { Buzzsprout::OAuth.wait_for_callback(server, state: 'state', issuer: 'https://example.com', timeout: 5) }
     assert_match(/declined/, error.message)
-    thread.value
+    response = thread.value
+    assert_includes response.body.force_encoding(Encoding::UTF_8), 'That connection didn’t make it through.'
+    assert_includes response.body.force_encoding(Encoding::UTF_8), 'terminal'
   ensure
     server.close
+  end
+
+  def test_generic_callback_page_uses_app_handoff
+    success = Buzzsprout::OAuth.callback_page(success: true)
+    assert_includes success, "You’re all set."
+    assert_includes success, 'Connection approved.<br>Return to your app to finish connecting.'
+    refute_includes success, 'CLI'
+
+    failure = Buzzsprout::OAuth.callback_page(success: false)
+    assert_includes failure, 'Return to your app for details and try again.'
+    refute_includes failure, 'terminal for details'
   end
 
   def test_refresh_persists_rotated_pair_and_reuses_it
