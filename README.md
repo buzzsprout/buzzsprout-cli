@@ -7,7 +7,7 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 ## Features
 
 - **First run** — braille startup animation of the Buzzsprout mark + wordmark (embedded in the CLI source), token prompt, live `GET /api/podcasts`, celebration, token saved to `~/.buzzsprout.json`
-- **Token auth** — `Authorization: Token token=…` from **Profile → API** (not OAuth)
+- **Browser login** — OAuth with automatic refresh; API tokens remain supported for scripts
 - **Identifiable User-Agent** — `BuzzsproutCLI/0.1.0` on every request
 - **Rate limits** — 60 req/min; retries `429` with backoff
 - **ETags** — sends `If-None-Match` on repeat GETs
@@ -74,46 +74,26 @@ Then either:
 
 ## First run
 
-With no config yet, `buzzsprout` (or `buzzsprout login`) will:
+Run `buzzsprout login` to connect your account:
 
-1. Play a short braille animation of the Buzzsprout logo (sprout/bolt grows, then the “Buzzsprout” wordmark wipes in). The finale stays on screen while auth continues below it. The art is a constant in the Ruby source — no image files in the repo. On dark terminals the bolt and wordmark use bright green `#61D752`; on light terminals the wordmark stays dark `#214538`. Override with `BUZZSPROUT_THEME=dark` or `light` (`NO_COLOR` still disables color).
-2. Prompt for your API token (**Profile → API** in Buzzsprout)
-3. Test the connection:
+1. The CLI prints an authorization link and opens it in your browser.
+2. Sign in to Buzzsprout and approve access. Use a browser on the same computer as the CLI.
+3. Return to the terminal. The CLI checks the connection, saves your credentials privately, and helps you choose a default podcast.
+4. If agent skills are not installed, the CLI offers to install them. Use `--install-skills` to install without prompting or `--no-skills` to skip.
 
-   ```http
-   GET https://www.buzzsprout.com/api/podcasts
-   Authorization: Token token=YOUR_API_TOKEN
-   User-Agent: BuzzsproutCLI/0.1.0
-   Accept: application/json
-   ```
-
-4. On success: a blank line, then **Authentication Successful** in the logo green `#61D752` (`NO_COLOR` / non-TTY: plain text), then **pick a podcast** if you have more than one (arrow keys, type to search, Enter), and save the token to `~/.buzzsprout.json` (mode `0600`)
-5. If agent skills are not already installed, offer **Install agent skills now? [Y/n]** (default yes). Skipped when skills are already present, `--no-skills` / `--skip-skills`, `--json`, `BUZZSPROUT_NONINTERACTIVE=1`, or no TTY. `buzzsprout login --install-skills` copies them without prompting.
-6. On failure: print a clear error and offer to retry / re-enter the token
-
-```bash
-buzzsprout login
-buzzsprout login --no-animation
-buzzsprout login --install-skills
-buzzsprout login --no-skills
-```
-
-Skip the animation with `--no-animation` or `BUZZSPROUT_NO_ANIMATION=1`. Prefer `BUZZSPROUT_API_TOKEN` in the environment over `--token` (process list / history).
+Use `buzzsprout login --no-browser` to open the printed link yourself. Authorization times out after five minutes; rerun login if needed.
 
 ## Authentication
 
-The CLI sends the token only as `Authorization: Token token=…` (never as `?api_token=`). It never prints the raw token (including `--json`, `--dry-run`, `status` / `whoami`, and error text). Dry-run shows `Token token=[REDACTED]`.
+OAuth access tokens refresh automatically. If the connection has been revoked or cannot be refreshed, run `buzzsprout login` again. Failed login attempts leave existing saved credentials intact.
 
-**Agents:** do not read `~/.buzzsprout.json` for the token value. Do not print or echo `BUZZSPROUT_API_TOKEN`. Authenticate with `buzzsprout login` or assume the env/config is already set, then use `buzzsprout` instead of constructing curl with a real token in chat.
+Existing API-token configurations continue to work. For token login, run `buzzsprout login --api-token` and enter your token from **Profile → API** at the hidden prompt. `BUZZSPROUT_API_TOKEN` takes precedence over saved credentials, including OAuth. It also selects token authentication when running login. This remains useful for scripts or remote sessions where browser callbacks cannot reach the CLI.
 
-| Source | Notes |
-| --- | --- |
-| Interactive `buzzsprout login` | TTY prompt uses `noecho`; preferred |
-| `BUZZSPROUT_API_TOKEN` | Env override; never print or commit this |
-| `~/.buzzsprout.json` | Written by `buzzsprout login` (mode `0600` on Unix; Windows keeps the creating user's default ACL) |
-| `--token` | Login only; can leak via process list and shell history — avoid |
+Credentials are saved in `~/.buzzsprout.json` with mode `0600` on Unix. Never copy this file into a chat or commit it. Tokens are redacted from status, dry-run output, and API errors. `status` shows the active authentication method.
 
-The config file stores `api_token` and `default_podcast_id`. Do not open it to copy the secret into a transcript.
+`buzzsprout logout` revokes the saved OAuth connection and removes local credentials and the default podcast. `--local-only` removes only the local copy; you can disconnect the app from your Buzzsprout profile. API-token logout only removes the saved token; an environment variable remains active until you unset it.
+
+**Agents:** do not read the credential file or print `BUZZSPROUT_API_TOKEN`. Use the authenticated CLI instead of constructing requests with real tokens.
 
 ```bash
 buzzsprout status                 # token_set: true — never the secret

@@ -5,14 +5,20 @@ module Buzzsprout
     class Logout < Base
       USAGE = 'buzzsprout logout'
       HELP_PAGE = {
-        summary: 'Remove the saved token and default podcast.',
-        usage: 'buzzsprout logout',
+        summary: 'Disconnect and remove saved credentials and the default podcast.',
+        usage: 'buzzsprout logout [--local-only]',
+        flags: [['--local-only', 'Forget saved credentials without revoking the OAuth connection']],
         aliases: %w[logout],
         examples: ['buzzsprout logout']
       }.freeze
 
       def run
-        Config.delete!
+        Config.with_lock do
+          Config.clear_cache
+          credentials = Config.loaded[:oauth]
+          OAuth.revoke(credentials) if credentials && !@args.delete('--local-only')
+          Config.delete!
+        end
         @io.puts "Logged out. Removed #{Config.config_file}."
         0
       end
@@ -31,6 +37,7 @@ module Buzzsprout
         if Config.configured?
           payload = {
             authenticated: true,
+            auth_method: Config.oauth? ? 'oauth' : 'api_token',
             token_set: true,
             config_file: Config.config_file,
             default_podcast_id: Config.default_podcast_id,
@@ -40,7 +47,7 @@ module Buzzsprout
           output(payload) do
             @io.puts Color.green('Authenticated', io: @io)
             @formatter.kv('Config', Config.config_file)
-            @formatter.kv('Token', 'set')
+            @formatter.kv('Method', Config.oauth? ? 'OAuth' : 'API token')
             @formatter.kv('Podcast', Config.default_podcast_id)
             @formatter.kv('API', Config.api_base_url)
           end

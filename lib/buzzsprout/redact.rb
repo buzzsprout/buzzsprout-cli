@@ -6,10 +6,10 @@ module Buzzsprout
   module Redact
     PLACEHOLDER = '[REDACTED]'
     MIN_LITERAL_LENGTH = 8
-    QUERY_KEYS = /\A(api_token|access_token)\z/i
+    QUERY_KEYS = /\A(api_token|access_token|refresh_token|code_verifier|client_secret)\z/i
     AUTH_VALUE = /Token\s+token=\S+/i
-    QUERY_PAIR = /(?:api_token|access_token)=[^&\s"'\\]+/i
-    JSON_SECRET_KEY = /"(api_token|access_token)"\s*:\s*"(?:\\.|[^"\\])*"/i
+    QUERY_PAIR = /(?:api_token|access_token|refresh_token|code_verifier|client_secret)=[^&\s"'\\]+/i
+    JSON_SECRET_KEY = /"(api_token|access_token|refresh_token|code_verifier|client_secret)"\s*:\s*"(?:\\.|[^"\\])*"/i
 
     module_function
 
@@ -18,9 +18,10 @@ module Buzzsprout
       secrets(known).each do |secret|
         escaped = Regexp.escape(secret)
         s.gsub!(/Token\s+token=#{escaped}/i, "Token token=#{PLACEHOLDER}")
-        s.gsub!(/(api_token|access_token)=#{escaped}/i, "\\1=#{PLACEHOLDER}")
+        s.gsub!(/(api_token|access_token|refresh_token|code_verifier|client_secret)=#{escaped}/i, "\\1=#{PLACEHOLDER}")
         s.gsub!(secret, PLACEHOLDER) if secret.length >= MIN_LITERAL_LENGTH
       end
+      s.gsub!(/Bearer\s+\S+/i, "Bearer #{PLACEHOLDER}")
       s.gsub!(AUTH_VALUE, "Token token=#{PLACEHOLDER}")
       s.gsub!(QUERY_PAIR) { |pair| "#{pair.split('=', 2).first}=#{PLACEHOLDER}" }
       s.gsub!(JSON_SECRET_KEY, "\"\\1\": \"#{PLACEHOLDER}\"")
@@ -50,6 +51,7 @@ module Buzzsprout
       list << env unless env.empty?
       if defined?(Config)
         begin
+          list.concat(Array(Config.loaded[:oauth]&.values_at(:access_token, :refresh_token)).compact)
           stored = Config.token.to_s
           list << stored unless stored.empty?
         rescue StandardError

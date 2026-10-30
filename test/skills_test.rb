@@ -14,6 +14,11 @@ class SkillsContentTest < Buzzsprout::Test
       assert_match(/\A---\n/, text)
       assert_match(/^name: /, text)
       assert_match(/^description: /, text)
+      if name == 'team'
+        assert_match(/sign in to Buzzsprout/, text)
+        assert_match(/web app/, text)
+        next
+      end
       assert_match(/Authorization: Token token=/, text)
       assert_match(/User-Agent:/, text)
       assert_match(/## CLI/, text)

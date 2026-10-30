@@ -7,10 +7,12 @@ module Buzzsprout
     class Login < Base
       USAGE = 'buzzsprout login [--no-animation] [--install-skills|--no-skills]'
       HELP_PAGE = {
-        summary: 'Authenticate with a Buzzsprout API token.',
+        summary: 'Connect your Buzzsprout account in your browser.',
         usage: 'buzzsprout login [--no-animation] [--install-skills|--no-skills]',
         aliases: %w[login auth init],
         flags: [
+          ['--api-token', 'Use the API token prompt instead of browser login'],
+          ['--no-browser', 'Print the authorization link without opening a browser'],
           ['--token TOKEN', 'Avoid: visible in process list and shell history. Prefer the prompt or BUZZSPROUT_API_TOKEN'],
           ['--no-animation', 'Skip the intro animation'],
           ['--install-skills', 'Install agent skills after login without prompting'],
@@ -25,6 +27,9 @@ module Buzzsprout
       }.freeze
 
       def run
+        token_login = @args.delete('--api-token') || @options.token || !ENV['BUZZSPROUT_API_TOKEN'].to_s.empty?
+        return oauth_login unless token_login
+
         play_intro
         say_hello
 
@@ -59,6 +64,20 @@ module Buzzsprout
       end
 
       private
+
+      def oauth_login
+        raise 'Login cannot run with --dry-run.' if @options.dry_run?
+        credentials = OAuth.authorize(io: @io, open_browser: !@args.delete('--no-browser'))
+        podcasts = Client.new(token: credentials[:access_token], auth_scheme: 'Bearer').get('/podcasts') || []
+        Config.with_lock do
+          Config.clear_cache
+          Config.save(auth_method: 'oauth', oauth: credentials, api_token: nil, token: nil, default_podcast_id: nil)
+          list = PodcastPicker.wrap_list(podcasts)
+          Config.save(default_podcast_id: @options.podcast_id || ENV['BUZZSPROUT_PODCAST_ID'] || (list.first['id'] if list.size == 1))
+        end
+        celebrate(podcasts)
+        0
+      end
 
       def play_intro
         return if @options.no_animation?
@@ -96,7 +115,7 @@ module Buzzsprout
       end
 
       def persist(token, podcasts)
-        config = { api_token: token }
+        config = { api_token: token, auth_method: 'api_token', oauth: nil }
         list = PodcastPicker.wrap_list(podcasts)
         if (explicit = @options.podcast_id || ENV['BUZZSPROUT_PODCAST_ID'])
           config[:default_podcast_id] = explicit

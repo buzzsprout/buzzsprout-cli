@@ -7,6 +7,7 @@ require_relative 'redact'
 require_relative 'color'
 require_relative 'options'
 require_relative 'client'
+require_relative 'oauth'
 require_relative 'formatter'
 require_relative 'animation'
 require_relative 'podcast_picker'
@@ -36,7 +37,7 @@ module Buzzsprout
       Usage: buzzsprout [command] [args] [options]
 
       First run / auth
-        login, auth, init     Logo animation, prompt for API token, test GET /podcasts
+        login, auth, init     Connect in your browser; --api-token for token login
                               After success, may offer to install agent skills
         logout                Remove ~/.buzzsprout.json
         status, whoami        Show whether a token is saved

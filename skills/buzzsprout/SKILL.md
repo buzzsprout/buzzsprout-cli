@@ -20,7 +20,7 @@ Token auth (not OAuth). The user gets a token under **Profile → API** in Buzzs
 
 - Never read `~/.buzzsprout.json` (or `BUZZSPROUT_CONFIG`) to copy `api_token` into chat, logs, or curl.
 - Never print, echo, or interpolate `BUZZSPROUT_API_TOKEN`.
-- Authenticate with `buzzsprout login` (TTY prompt, no echo) or assume env/config is already set.
+- Authenticate with `buzzsprout login` (browser authorization) or assume env/config is already set.
 - Prefer the `buzzsprout` CLI over constructing HTTP. If you must show a header shape, keep the placeholder `YOUR_API_TOKEN` — never a real token.
 - `buzzsprout status --json` reports `token_set: true` or `false`, not the secret. `--dry-run` prints `Token token=[REDACTED]`.
 
@@ -35,7 +35,7 @@ Accept: application/json
 Resolution order inside the CLI (not for agents to read): env `BUZZSPROUT_API_TOKEN`, then the file written by `login`. `--token` on argv is login-only and can leak via process list/history — do not recommend it.
 
 ```bash
-buzzsprout login                  # animation → prompt → GET /podcasts → picker if 2+ shows → save
+buzzsprout login                  # browser authorization → GET /podcasts → picker → save
 buzzsprout login --no-animation
 buzzsprout login --install-skills # also copy agent skills (no prompt)
 buzzsprout login --no-skills      # skip the post-login skills offer
@@ -76,7 +76,7 @@ Extensionless paths are canonical; `.json` is also accepted by the API.
 | Episodes | `buzzsprout episodes` | `episodes` |
 | Uploads | `buzzsprout uploads` | `uploads` |
 | Stats | `buzzsprout downloads` | `stats` |
-| Team | `buzzsprout team` | `team` |
+| Team | Direct the user to sign in and use the web app | `team` |
 | Contributors | `buzzsprout contributors` | `contributors` |
 | Brand affiliations | `buzzsprout brand-affiliations` | `brand_affiliations` |
 | Chapters | `buzzsprout chapters` | `chapters` |
