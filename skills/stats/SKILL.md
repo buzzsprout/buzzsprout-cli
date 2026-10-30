@@ -12,6 +12,16 @@ Download activity for **one** podcast-local calendar date (`YYYY-MM-DD`). No dat
 - Totals per episode that had downloads that day.
 - Paged, normalized download details for one episode.
 
+## Efficient CLI workflow
+
+Use the authenticated CLI with `--json`; do not inspect credentials or rediscover the API with curl.
+
+- For lifetime totals or lifetime rankings, use `buzzsprout episodes list --json` and read `total_downloads`. Do not fetch every day of the podcast's history.
+- For totals across all episodes on one date, use `buzzsprout downloads YYYY-MM-DD --json`. This returns totals without requiring individual episode requests.
+- For a date range, fetch each required date once and aggregate the results. The API has no date-range endpoint. Respect rate limits and report the dates used; don't count a missing or failed request as zero.
+- Only request individual download details when the user wants geography, apps, or devices. Use `--per-page 1000` and follow `pagination.next_page` until `has_more` is false.
+- For historical comparisons, use complete days and the podcast's timezone. Prefer explicit dates; `today` and `yesterday` are resolved using the CLI computer's date.
+
 ## Endpoints
 
 - `GET /api/:podcast_id/downloads?date=YYYY-MM-DD`

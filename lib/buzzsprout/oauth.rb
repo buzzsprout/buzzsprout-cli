@@ -8,13 +8,24 @@ require 'timeout'
 
 module Buzzsprout
   module OAuth
-    CLIENT_ID = ''.freeze # Set to the registered public CLI application ID before release.
+    CLIENT_ID = 'X0uM4r1MG9EH0Q6y6n-nT2bvZOV7waPpVnh4FCpYF38'.freeze
     CALLBACK_PATH = '/oauth/callback'
     module_function
 
-    def issuer
-      uri = URI(Config.api_base_url)
+    LOOPBACK_HOSTS = %w[localhost 127.0.0.1 ::1 [::1]].freeze
+
+    # Plain HTTP is allowed only for loopback development servers; tokens must not cross a network in the clear.
+    def secure_uri!(value)
+      uri = URI(value.to_s)
       raise 'Invalid API URL' unless %w[https http].include?(uri.scheme) && uri.host && !uri.userinfo
+      if uri.scheme == 'http' && !LOOPBACK_HOSTS.include?(uri.host.downcase)
+        raise "Refusing to send OAuth tokens over plain HTTP to #{uri.host}. Use https in BUZZSPROUT_API_BASE."
+      end
+      uri
+    end
+
+    def issuer
+      uri = secure_uri!(Config.api_base_url)
       "#{uri.scheme}://#{uri.host}#{uri.port == uri.default_port ? '' : ":#{uri.port}"}"
     end
 
@@ -23,7 +34,7 @@ module Buzzsprout
     end
 
     def token_request(parameters, server: issuer)
-      uri = URI("#{server}/oauth/token")
+      uri = secure_uri!("#{server}/oauth/token")
       request = Net::HTTP::Post.new(uri)
       request['User-Agent'] = Client::USER_AGENT
       request['Accept'] = 'application/json'
@@ -167,7 +178,7 @@ module Buzzsprout
     end
 
     def revoke(data)
-      uri = URI("#{data.fetch(:issuer)}/oauth/revoke")
+      uri = secure_uri!("#{data.fetch(:issuer)}/oauth/revoke")
       request = Net::HTTP::Post.new(uri)
       request['User-Agent'] = Client::USER_AGENT
       request.set_form_data(client_id: data.fetch(:client_id), token: data.fetch(:refresh_token), token_type_hint: 'refresh_token')

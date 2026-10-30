@@ -15,48 +15,42 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 
 ## Installation
 
-Ruby 3.0+ is required. This GitHub repo is **private**: unauthenticated `raw.githubusercontent.com` (and the public API) **404**. Clone with your existing GitHub credentials, then run the installer.
+On macOS or Linux, install Ruby 3.0+ and Git, then run:
 
 ```bash
-git clone --depth 1 https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
-~/.buzzsprout-cli/script/install
-buzzsprout login
-```
-
-SSH:
-
-```bash
-git clone --depth 1 git@github.com:higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
-~/.buzzsprout-cli/script/install
-buzzsprout login
-```
-
-If you already have a checkout: `./script/install` from the repo root. The script checks for Ruby 3.0+ and symlinks `bin/buzzsprout` to `~/.local/bin` (or `~/bin` if that directory is already on PATH). It does not `sudo`. If `~/.buzzsprout-cli` already exists and is this repo, run the install script from that clone instead of cloning again.
-
-A specific branch (until this lands on `main`, use the PR branch):
-
-```bash
-git clone --depth 1 -b cursor/buzzsprout-cli-3c1e https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
-~/.buzzsprout-cli/script/install
-buzzsprout login
-```
-
-Authenticated one-liner if you have [`gh`](https://cli.github.com/) logged in (`gh auth status`). Quote the path so `?ref=` is not eaten by the shell. The piped script still `git clone`s, so GitHub git credentials (HTTPS or SSH) are required too:
-
-```bash
-gh api "repos/higher-pixels/buzzsprout-cli/contents/script/install?ref=main" --jq .content | base64 --decode | bash
-```
-
-Match `ref=` with `BUZZSPROUT_CLI_REF` when installing a non-default branch. Use `BUZZSPROUT_CLI_REPO=git@github.com:higher-pixels/buzzsprout-cli.git` if your `gh` is authenticated but `git clone` over HTTPS is not.
-
-If this repo is ever public, unauthenticated raw curl would work. **While it is private, that URL 404s:**
-
-```bash
-# 404 while the repo is private — do not use this as the primary install
 curl -fsSL https://raw.githubusercontent.com/higher-pixels/buzzsprout-cli/main/script/install | bash
+buzzsprout login
 ```
 
-Optional overrides: `BUZZSPROUT_CLI_HOME` (clone dir), `BUZZSPROUT_CLI_BIN` (where the executable goes), `BUZZSPROUT_CLI_REPO` (git remote), `BUZZSPROUT_CLI_REF` (branch or tag, default `main`).
+The repository is public; no GitHub account is required. The installer clones into `~/.buzzsprout-cli` and links `buzzsprout` into `~/.local/bin` (or `~/bin` if already on PATH). Follow any PATH instructions it prints. It does not use `sudo`. On Windows, use WSL with Ruby and Git installed.
+
+To inspect the code before installing:
+
+```bash
+git clone https://github.com/higher-pixels/buzzsprout-cli.git ~/.buzzsprout-cli
+~/.buzzsprout-cli/script/install
+buzzsprout login
+```
+
+If you already have a checkout, run `./script/install` from its root.
+
+### Updating
+
+```bash
+buzzsprout update                  # update CLI and refresh agent skills
+buzzsprout update --check          # check without installing
+buzzsprout update --check --json   # machine-readable check for AI assistants
+```
+
+Updates follow `main`, so changes to commands, the public OAuth client ID, and skills are detected even when the version number hasn't changed. The updater only fast-forwards clean installations of the official repository on `main`; it refuses local edits, other branches, and divergent history. Your login and saved podcast are preserved. Gem installations should use `gem update buzzsprout-cli` instead.
+
+Skills refresh in detected Claude Code and Cursor directories, or the destination selected by `BUZZSPROUT_SKILLS_DIR` / `--dir`. For a custom location, run `buzzsprout update --dir PATH`. Previous skill copies are backed up. Start a new AI session after refreshing skills. If the skill refresh fails, the CLI update remains installed and the command reports how to retry.
+
+Normal commands check GitHub at most once a day and print update notices on stderr, preserving JSON stdout. Checks have a three-second network timeout; offline or rate-limited checks do not fail the command. Automatic checks are skipped in CI, for development/dirty checkouts, and when `BUZZSPROUT_NO_UPDATE_CHECK=1`. Explicit `update --check` always requests a fresh result. Nothing updates automatically.
+
+Older installations without the update command can be updated from a clean `main` checkout with `git pull --ff-only`, then `./script/install` and `buzzsprout skills install`.
+
+Installer overrides: `BUZZSPROUT_CLI_HOME` (clone directory), `BUZZSPROUT_CLI_BIN` (executable directory), `BUZZSPROUT_CLI_REPO` (Git remote), and `BUZZSPROUT_CLI_REF` (branch or tag, default `main`).
 
 ### From source
 
@@ -70,7 +64,8 @@ Then either:
 
 - Run directly: `./bin/buzzsprout`
 - Add to PATH: `export PATH="$PATH:/path/to/buzzsprout-cli/bin"`
-- Install as a gem: `rake install` or `./script/install`
+- Install as a gem: `rake install`
+- Link this checkout onto PATH: `./script/install`
 
 ## First run
 
@@ -199,7 +194,7 @@ buzzsprout skills path
 buzzsprout skills install --dir ~/.cursor/skills
 ```
 
-`buzzsprout login` offers the same install (default `~/.cursor/skills`, or `BUZZSPROUT_SKILLS_DIR` / `--dir`) when those skill folders are missing. Copy or symlink into whatever directory your agent already loads (`~/.cursor/skills`, `~/.claude/skills`, `.cursor/skills` in a project). Details: [skills/README.md](skills/README.md).
+`buzzsprout skills install` installs or refreshes skills for detected Cursor and Claude Code installations (`~/.cursor` and `~/.claude`). Login offers the same installation when skills are missing or outdated. `BUZZSPROUT_SKILLS_DIR` or `--dir` selects a single destination instead. Resource folders use names such as `buzzsprout-stats`; previous Buzzsprout folders are archived beside the skills directory, and unrelated skills are preserved. Details: [skills/README.md](skills/README.md).
 
 ## Environment
 
@@ -209,9 +204,10 @@ buzzsprout skills install --dir ~/.cursor/skills
 | `BUZZSPROUT_PODCAST_ID` | Explicit podcast id for this process (skips the picker) |
 | `BUZZSPROUT_NONINTERACTIVE=1` | Never open the podcast picker or the post-login skills prompt |
 | `BUZZSPROUT_CONFIG` | Config path (default `~/.buzzsprout.json`) |
-| `BUZZSPROUT_SKILLS_DIR` | Skills install destination (default `~/.cursor/skills`) |
+| `BUZZSPROUT_SKILLS_DIR` | Override detected agent skills directories |
 | `BUZZSPROUT_API_BASE` | API base (default `https://www.buzzsprout.com/api`) |
 | `BUZZSPROUT_NO_ANIMATION=1` | Skip the intro |
+| `BUZZSPROUT_NO_UPDATE_CHECK=1` | Disable automatic update checks |
 | `BUZZSPROUT_THEME` | `dark` or `light` for the intro. If unset: `COLORFGBG`, then a best-effort OSC 11 query **only** on a raw TTY (skipped if that would leak). Otherwise **dark** (bright green `#61D752` for bolt + wordmark). Light terminals use `#214538` for the wordmark. |
 | `NO_COLOR` / `BUZZSPROUT_NO_COLOR` | Disable ANSI color |
 

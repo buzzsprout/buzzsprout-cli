@@ -61,7 +61,7 @@ module Buzzsprout
           @formatter.heading("Episodes for podcast #{podcast_id}")
           Array(episodes).each do |episode|
             vis = episode['private'] ? 'private' : 'public'
-            @io.puts "#{episode['id']}  #{episode['title']}  (#{vis}, plays: #{episode['total_plays']})"
+            @io.puts "#{episode['id']}  #{episode['title']}  (#{vis}, downloads: #{episode['total_downloads']})"
           end
         end
         0
@@ -75,7 +75,7 @@ module Buzzsprout
           @formatter.show_record("Episode #{episode['id']}", episode, %w[
             id title audio_url artwork_url description artist tags published_at
             duration guid custom_url episode_number season_number episode_type
-            explicit private total_plays
+            explicit private total_downloads
           ])
         end
         0

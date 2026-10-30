@@ -108,6 +108,20 @@ class OAuthTest < Buzzsprout::Test
     end
   end
 
+  def test_refuses_plain_http_except_for_loopback_development
+    with_config do
+      ENV['BUZZSPROUT_API_BASE'] = 'http://staging.example.com/api'
+      error = assert_raises(RuntimeError) { Buzzsprout::OAuth.issuer }
+      assert_match(/plain HTTP/, error.message)
+      assert_raises(RuntimeError) { Buzzsprout::OAuth.token_request({ grant_type: 'refresh_token' }, server: 'http://staging.example.com') }
+      assert_raises(RuntimeError) do
+        Buzzsprout::OAuth.revoke(credentials.merge(issuer: 'http://staging.example.com'))
+      end
+      ENV['BUZZSPROUT_API_BASE'] = 'http://127.0.0.1:3000/api'
+      assert_equal 'http://127.0.0.1:3000', Buzzsprout::OAuth.issuer
+    end
+  end
+
   def test_bearer_requests_and_secret_redaction
     transport = Buzzsprout::StubTransport.new(Buzzsprout.raw(status: 200, body: []))
     Buzzsprout::Client.new(token: 'private-access-token', auth_scheme: 'Bearer', transport: transport).get('/podcasts')

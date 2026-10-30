@@ -6,10 +6,11 @@ module Buzzsprout
   module Redact
     PLACEHOLDER = '[REDACTED]'
     MIN_LITERAL_LENGTH = 8
-    QUERY_KEYS = /\A(api_token|access_token|refresh_token|code_verifier|client_secret)\z/i
+    SECRET_KEYS = 'api_token|access_token|refresh_token|code_verifier|client_secret|code'
+    QUERY_KEYS = /\A(#{SECRET_KEYS})\z/i
     AUTH_VALUE = /Token\s+token=\S+/i
-    QUERY_PAIR = /(?:api_token|access_token|refresh_token|code_verifier|client_secret)=[^&\s"'\\]+/i
-    JSON_SECRET_KEY = /"(api_token|access_token|refresh_token|code_verifier|client_secret)"\s*:\s*"(?:\\.|[^"\\])*"/i
+    QUERY_PAIR = /(?<![\w-])(?:#{SECRET_KEYS})=[^&\s"'\\]+/i
+    JSON_SECRET_KEY = /"(#{SECRET_KEYS})"\s*:\s*"(?:\\.|[^"\\])*"/i
 
     module_function
 
