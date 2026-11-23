@@ -17,6 +17,15 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 
 Git installs track `main`. RubyGems, mise, and Homebrew installs come from tagged releases (`v0.1.1` and later). See [RELEASING.md](RELEASING.md).
 
+### macOS with Homebrew
+
+Once the first release is available in the Buzzsprout tap, install the CLI and sign in with the commands below. Until then, use the [Git installer](#git).
+
+```bash
+brew install buzzsprout/tap/buzzsprout-cli
+buzzsprout login
+```
+
 ### Git
 
 On macOS or Linux, install Ruby 3.0+ and Git, then run:
@@ -54,10 +63,6 @@ mise installs that gem:
 ```bash
 mise use -g gem:buzzsprout-cli
 ```
-
-### Homebrew
-
-Once the first release formula is merged into the Buzzsprout tap, install it with `brew install buzzsprout/tap/buzzsprout-cli`.
 
 ### Updating
 
