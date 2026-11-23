@@ -65,6 +65,15 @@ mise use -g gem:buzzsprout-cli
 buzzsprout login
 ```
 
+If mise reports that no versions match its minimum release age, you can select a specific release. For example, to install version 0.1.1:
+
+```bash
+mise use -g gem:buzzsprout-cli@0.1.1
+buzzsprout version
+```
+
+This pins the CLI to 0.1.1. Run `mise use -g gem:buzzsprout-cli@latest` to track newer eligible releases again.
+
 ### Updating
 
 Git installations keep their current update path. From a clean checkout of the official repository on `main`:
