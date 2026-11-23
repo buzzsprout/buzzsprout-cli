@@ -51,17 +51,18 @@ Installer overrides: `BUZZSPROUT_CLI_HOME` (clone directory), `BUZZSPROUT_CLI_BI
 
 ### RubyGems and mise
 
-After a release is on RubyGems:
+With Ruby 3.0 or later, install the gem and sign in:
 
 ```bash
 gem install buzzsprout-cli
 buzzsprout login
 ```
 
-mise installs that gem:
+With Ruby 3.0 or later active in mise, install the CLI globally and sign in:
 
 ```bash
 mise use -g gem:buzzsprout-cli
+buzzsprout login
 ```
 
 ### Updating
