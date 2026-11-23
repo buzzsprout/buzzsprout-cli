@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Bump the CLI version, commit, and create the matching vX.Y.Z tag.
+#
+#   script/release 0.1.1
+#   script/release 0.1.1 --push
+#
+# Pushing the tag runs .github/workflows/release.yml. See RELEASING.md.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+version="${1:-}"
+push="${2:-}"
+
+die() {
+  printf 'buzzsprout-cli release: %s\n' "$*" >&2
+  exit 1
+}
+
+[[ $# -le 2 ]] || die "usage: script/release X.Y.Z [--push]"
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "usage: script/release X.Y.Z [--push]"
+[[ -z "$push" || "$push" == "--push" ]] || die "usage: script/release X.Y.Z [--push]"
+[[ -z "$(git status --porcelain)" ]] || die "Commit or stash local changes before releasing."
+
+branch="$(git branch --show-current)"
+[[ "$branch" == "main" ]] || die "Releases are cut from main (current branch: ${branch:-detached})."
+
+current="$(ruby -e 'v = File.read("lib/buzzsprout/version.rb")[/VERSION = .([0-9]+\.[0-9]+\.[0-9]+)./, 1]; abort "Could not read lib/buzzsprout/version.rb" unless v; print v')"
+ruby -e 'exit(Gem::Version.new(ARGV[0]) > Gem::Version.new(ARGV[1]) ? 0 : 1)' "$version" "$current" \
+  || die "Version ${version} must be greater than ${current}."
+
+if git rev-parse -q --verify "refs/tags/v${version}" >/dev/null; then
+  die "Tag v${version} already exists."
+fi
+
+ruby - "$version" "$current" <<'RUBY'
+version, current = ARGV
+path = "lib/buzzsprout/version.rb"
+text = File.read(path)
+updated = text.sub(/VERSION = .[0-9.]+./, "VERSION = '#{version}'")
+abort "version.rb was not updated" if updated == text
+File.write(path, updated)
+Dir["README.md", "skills/**/*.md"].each do |file|
+  body = File.read(file)
+  needle = "BuzzsproutCLI/#{current}"
+  next unless body.include?(needle)
+  File.write(file, body.gsub(needle, "BuzzsproutCLI/#{version}"))
+end
+RUBY
+
+git add -- lib/buzzsprout/version.rb
+[[ -f README.md ]] && git add -u -- README.md
+[[ -d skills ]] && git add -u -- skills
+git commit -m "Bump version to ${version}."
+git tag -a "v${version}" -m "Version ${version}"
+
+printf 'Tagged v%s.\n' "$version"
+if [[ "$push" == "--push" ]]; then
+  git push --atomic origin HEAD "v${version}"
+  printf 'Pushed main and v%s. GitHub Actions will test, publish the release, and push the gem.\n' "$version"
+else
+  printf 'Review the commit, then push with:\n'
+  printf '  git push --atomic origin HEAD v%s\n' "$version"
+fi

@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'open3'
+require 'rubygems/package'
+require 'tmpdir'
+
+root = File.expand_path('..', __dir__)
+gem_path = ARGV[0]
+abort 'usage: script/verify-gem PATH.gem' if gem_path.nil? || gem_path.empty? || !File.file?(gem_path)
+
+errors = []
+spec = Gem::Package.new(gem_path).spec
+errors << 'gem executable list does not include buzzsprout' unless spec.executables.include?('buzzsprout')
+
+tag = ENV['GITHUB_REF_NAME']
+if tag && !tag.empty? && tag != "v#{spec.version}"
+  errors << "tag #{tag} does not match gem version #{spec.version}"
+end
+
+expected_skills = Dir.children(File.join(root, 'skills')).sort.select do |name|
+  File.directory?(File.join(root, 'skills', name))
+end
+errors << 'repository has no bundled skills' if expected_skills.empty?
+
+Dir.mktmpdir('buzzsprout-gem') do |dir|
+  _stdout, stderr, status = Open3.capture3('gem', 'unpack', gem_path, '--target', dir)
+  errors << "gem unpack failed: #{stderr.strip}" unless status.success?
+
+  unpacked = Dir[File.join(dir, 'buzzsprout-cli-*')].first
+  if unpacked.nil?
+    errors << 'unpacked gem directory is missing'
+  else
+    executable = File.join(unpacked, 'bin', 'buzzsprout')
+    if File.file?(executable)
+      first = File.open(executable, &:gets).to_s
+      errors << 'bin/buzzsprout is not a Ruby executable' unless first.start_with?('#!/usr/bin/env ruby')
+    else
+      errors << 'gem does not include bin/buzzsprout'
+    end
+
+    expected_skills.each do |name|
+      skill = File.join(unpacked, 'skills', name, 'SKILL.md')
+      errors << "gem does not include skills/#{name}/SKILL.md" unless File.file?(skill)
+    end
+  end
+end
+
+abort errors.join("\n") unless errors.empty?
+
+puts "verified #{File.basename(gem_path)}: executable buzzsprout, #{expected_skills.size} skills, version #{spec.version}"

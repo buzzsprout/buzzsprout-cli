@@ -25,6 +25,24 @@ class UpdaterTest < Buzzsprout::Test
     end
   end
 
+  def with_package(kind)
+    Dir.mktmpdir do |dir|
+      root = case kind
+             when :gem
+               File.join(dir, 'gems', 'buzzsprout-cli-0.1.0')
+             when :mise
+               File.join(dir, 'installs', 'gem-buzzsprout-cli', '0.1.0', 'libexec', 'gems', 'buzzsprout-cli-0.1.0')
+             when :homebrew
+               File.join(dir, 'Cellar', 'buzzsprout-cli', '0.1.0', 'libexec', 'gems', 'buzzsprout-cli-0.1.0')
+             when :source
+               dir
+             end
+      FileUtils.mkdir_p(root)
+      File.write(File.join(root, 'buzzsprout-cli.gemspec'), 'spec') if kind == :source
+      yield Buzzsprout::Updater.new(root: root)
+    end
+  end
+
   def git(root, *args)
     out, err, result = Open3.capture3('git', '-C', root, *args)
     assert result.success?, err
@@ -184,6 +202,66 @@ class UpdaterTest < Buzzsprout::Test
       error = assert_raises(RuntimeError) { updater.update(io: StringIO.new, dir: @skills_dir) }
       assert_match(/CLI updated, but skills/, error.message)
       assert_equal target, git(installed, 'rev-parse', 'HEAD')
+    end
+  end
+
+  def test_packaged_installs_report_their_package_manager
+    {
+      gem: 'gem update buzzsprout-cli',
+      mise: 'mise upgrade gem:buzzsprout-cli',
+      homebrew: 'brew upgrade buzzsprout-cli'
+    }.each do |kind, command|
+      with_package(kind) do |updater|
+        error = assert_raises(RuntimeError) { updater.update(io: StringIO.new) }
+        assert_includes error.message, command
+        assert_includes error.message, 'buzzsprout skills install'
+        updater.stub(:latest_release_version, '9.9.9') do
+          result = updater.check
+          assert result[:update_available]
+          assert_equal command, result[:update_command]
+          assert_equal kind.to_s, result[:distribution]
+          assert_equal Buzzsprout::VERSION, result[:current_version]
+        end
+        updater.stub(:latest_release_version, Buzzsprout::VERSION) do
+          refute updater.check[:update_available]
+        end
+      end
+    end
+  end
+
+  def test_packaged_check_prints_the_package_manager_command
+    updater = Object.new
+    def updater.check
+      { update_available: true, update_command: 'mise upgrade gem:buzzsprout-cli', distribution: 'mise' }
+    end
+    Buzzsprout::Updater.stub(:new, updater) do
+      status, out, err = run_cli(['update', '--check'])
+      assert_equal 0, status, err
+      assert_includes out, 'mise upgrade gem:buzzsprout-cli'
+      assert_includes out, 'buzzsprout skills install'
+    end
+  end
+
+  def test_packaged_notices_name_the_package_manager_and_are_cached
+    with_config do
+      with_package(:gem) do |updater|
+        ENV.delete('CI')
+        calls = 0
+        updater.stub(:latest_release_version, -> { calls += 1; '9.9.9' }) do
+          output = StringIO.new
+          2.times { updater.notify(io: output) }
+          assert_includes output.string, 'gem update buzzsprout-cli'
+          assert_equal 1, calls
+        end
+      end
+    end
+  end
+
+  def test_source_tree_without_git_refuses_self_update
+    with_package(:source) do |updater|
+      error = assert_raises(RuntimeError) { updater.check }
+      assert_match(/Clone the official repository or install a packaged release/, error.message)
+      assert_match(/packaged release/, assert_raises(RuntimeError) { updater.update(io: StringIO.new) }.message)
     end
   end
 

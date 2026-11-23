@@ -43,7 +43,7 @@ module Buzzsprout
                               After success, may offer to install agent skills
         logout                Remove ~/.buzzsprout.json
         status, whoami        Show whether a token is saved
-        update [--check]     Update the CLI and agent skills, or check for updates
+        update [--check]     Git installs: update the CLI and skills. Other installs: report the package-manager command
 
       Podcasts & episodes
         podcasts [list]

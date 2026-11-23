@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 jobs:
   test:
@@ -20,3 +21,24 @@ jobs:
           bundler-cache: true
       - name: Run tests
         run: bundle exec rake test
+
+  homebrew:
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      BUZZSPROUT_NO_UPDATE_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and test the formula from this commit
+        run: |
+          version="$(ruby -Ilib -rbuzzsprout/version -e 'print Buzzsprout::VERSION')"
+          archive="$RUNNER_TEMP/v${version}.tar.gz"
+          git archive --format=tar.gz --prefix=buzzsprout-cli/ --output="$archive" HEAD
+          sha="$(shasum -a 256 "$archive" | cut -d ' ' -f 1)"
+          brew tap-new --no-git local/release-test
+          formula="$(brew --repository local/release-test)/Formula/buzzsprout-cli.rb"
+          mkdir -p "$(dirname "$formula")"
+          script/homebrew-formula "$version" "$sha" |
+            sed "s|https://github.com/buzzsprout/buzzsprout-cli/archive/refs/tags/|file://$RUNNER_TEMP/|" > "$formula"
+          brew install --build-from-source local/release-test/buzzsprout-cli
+          brew test local/release-test/buzzsprout-cli

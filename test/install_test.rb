@@ -18,6 +18,11 @@ class InstallTest < Buzzsprout::Test
     assert_includes readme, '~/.buzzsprout-cli/script/install'
     assert_includes readme, 'buzzsprout login'
     assert_includes readme, 'buzzsprout update --check --json'
+    assert_includes readme, 'gem install buzzsprout-cli'
+    assert_includes readme, 'mise use -g gem:buzzsprout-cli'
+    assert_includes readme, 'gem update buzzsprout-cli'
+    assert_includes readme, 'mise upgrade gem:buzzsprout-cli'
+    assert_includes readme, 'brew upgrade buzzsprout-cli'
     assert_includes readme, 'no GitHub account is required'
     curl_idx = readme.index('curl -fsSL https://raw.githubusercontent.com/buzzsprout/buzzsprout-cli/main/script/install | bash')
     clone_idx = readme.index('git clone https://github.com/buzzsprout/buzzsprout-cli.git ~/.buzzsprout-cli')
@@ -53,7 +58,7 @@ class InstallTest < Buzzsprout::Test
       exe = File.join(bin, 'buzzsprout')
       assert File.executable?(exe), "missing #{exe}\n#{out}\n#{err}"
       version, = Open3.capture2(env, exe, 'version', chdir: home)
-      assert_match(/0\.1\.0/, version)
+      assert_includes version, Buzzsprout::VERSION
       assert_includes out, 'buzzsprout login'
       assert_includes out, 'local checkout'
     end
@@ -74,7 +79,7 @@ class InstallTest < Buzzsprout::Test
       assert File.executable?(exe), "missing #{exe}\n#{out}\n#{err}"
       assert_equal File.realpath(File.join(cache, 'bin', 'buzzsprout')), File.realpath(exe)
       version, = Open3.capture2(env, exe, 'version', chdir: home)
-      assert_match(/0\.1\.0/, version)
+      assert_includes version, Buzzsprout::VERSION
     end
   end
 

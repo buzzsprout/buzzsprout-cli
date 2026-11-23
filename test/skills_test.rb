@@ -31,6 +31,9 @@ class SkillsContentTest < Buzzsprout::Test
     refute_match(/login --token "\$BUZZSPROUT_API_TOKEN"/, overview)
     assert_match(/login --install-skills/, overview)
     assert_match(/offers to install or refresh these skills/, overview)
+    assert_match(/mise upgrade gem:buzzsprout-cli/, overview)
+    assert_match(/gem update buzzsprout-cli/, overview)
+    assert_match(/brew upgrade buzzsprout-cli/, overview)
   end
 
   def test_installed_is_false_until_every_skill_is_copied

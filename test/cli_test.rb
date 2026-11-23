@@ -237,11 +237,12 @@ class CLITest < Buzzsprout::Test
     assert_match(/podcast use/, out)
     assert_match(/episode <id> downloads today\|yesterday\|YYYY-MM-DD/, out)
     assert_match(/downloads today\|yesterday\|YYYY-MM-DD/, out)
+    assert_match(/package-manager command/, out)
     refute_match(/^        use \[/, out)
 
     status, out, = run_cli(['version'])
     assert_equal 0, status
-    assert_match(/0\.1\.0/, out)
+    assert_includes out, Buzzsprout::VERSION
   end
 
   def test_unknown_command
@@ -465,7 +466,7 @@ class CLITest < Buzzsprout::Test
         assert_equal 'GET', request[:method]
         assert_equal '/api/podcasts', request[:path]
         assert_equal 'Token token=super-secret-token', request[:authorization]
-        assert_equal 'BuzzsproutCLI/0.1.0', request[:user_agent]
+        assert_equal "BuzzsproutCLI/#{Buzzsprout::VERSION}", request[:user_agent]
         assert_equal 'application/json', request[:accept]
 
         saved = JSON.parse(File.read(path), symbolize_names: true)
