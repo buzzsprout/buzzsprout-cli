@@ -15,16 +15,30 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 
 ## Installation
 
-Git installs track `main`. RubyGems, mise, and Homebrew installs come from tagged releases (`v0.1.1` and later). See [RELEASING.md](RELEASING.md).
+### RubyGems and mise
 
-### macOS with Homebrew
-
-Once the first release is available in the Buzzsprout tap, install the CLI and sign in with the commands below. Until then, use the [Git installer](#git).
+With Ruby 3.0 or later, install the gem and sign in.
 
 ```bash
-brew install buzzsprout/tap/buzzsprout-cli
+gem install buzzsprout-cli
 buzzsprout login
 ```
+
+With Ruby 3.0 or later active in mise, install the CLI globally and sign in.
+
+```bash
+mise use -g gem:buzzsprout-cli
+buzzsprout login
+```
+
+If mise reports that no versions match its minimum release age, you can select a specific release. For example, to install version 0.1.1:
+
+```bash
+mise use -g gem:buzzsprout-cli@0.1.1
+buzzsprout version
+```
+
+This pins the CLI to 0.1.1. Run `mise use -g gem:buzzsprout-cli@latest` to track newer eligible releases again.
 
 ### Git
 
@@ -49,31 +63,6 @@ If you already have a checkout, run `./script/install` from its root.
 
 Installer overrides: `BUZZSPROUT_CLI_HOME` (clone directory), `BUZZSPROUT_CLI_BIN` (executable directory), `BUZZSPROUT_CLI_REPO` (Git remote), and `BUZZSPROUT_CLI_REF` (branch or tag, default `main`).
 
-### RubyGems and mise
-
-With Ruby 3.0 or later, install the gem and sign in:
-
-```bash
-gem install buzzsprout-cli
-buzzsprout login
-```
-
-With Ruby 3.0 or later active in mise, install the CLI globally and sign in:
-
-```bash
-mise use -g gem:buzzsprout-cli
-buzzsprout login
-```
-
-If mise reports that no versions match its minimum release age, you can select a specific release. For example, to install version 0.1.1:
-
-```bash
-mise use -g gem:buzzsprout-cli@0.1.1
-buzzsprout version
-```
-
-This pins the CLI to 0.1.1. Run `mise use -g gem:buzzsprout-cli@latest` to track newer eligible releases again.
-
 ### Updating
 
 Git installations keep their current update path. From a clean checkout of the official repository on `main`:
@@ -94,7 +83,6 @@ Packaged installations use their package manager:
 | --- | --- |
 | RubyGems | `gem update buzzsprout-cli` |
 | mise | `mise upgrade gem:buzzsprout-cli` |
-| Homebrew | `brew upgrade buzzsprout-cli` |
 
 `buzzsprout update` on a packaged installation prints that command and leaves the files in place. `buzzsprout update --check` compares the installed version with the latest GitHub Release. JSON output includes `update_command`. After the package manager finishes, run `buzzsprout skills install` to refresh copied agent skills. A custom destination uses `buzzsprout skills install --dir PATH`.
 
@@ -272,7 +260,7 @@ Tests use a local fake API (no real tokens). Do not put API tokens in this repo.
 
 ## Releasing
 
-`script/release 0.1.1` bumps the version and tags `v0.1.1`. Pushing the tag publishes the GitHub Release, the gem, and a Homebrew formula. Details: [RELEASING.md](RELEASING.md).
+`script/release 0.1.1` bumps the version and tags `v0.1.1`. Pushing the tag publishes the GitHub Release and the gem. Details: [RELEASING.md](RELEASING.md).
 
 Endpoint shapes follow [buzzsprout/buzzsprout-api#56](https://github.com/buzzsprout/buzzsprout-api/pull/56).
 
