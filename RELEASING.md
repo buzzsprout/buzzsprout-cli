@@ -9,7 +9,7 @@ Pushing that tag runs [`.github/workflows/release.yml`](.github/workflows/releas
 1. The test matrix from [`.github/workflows/test.yml`](.github/workflows/test.yml) runs on Ruby 3.0, 3.2, and 3.3.
 2. The workflow builds the gem and `script/verify-gem` checks that it contains the `buzzsprout` executable and every bundled skill.
 3. A GitHub Release is created with generated notes and the gem attached.
-4. Trusted publishing pushes the gem to RubyGems.org. That is what `gem install buzzsprout-cli` and `mise use -g gem:buzzsprout-cli` install.
+4. Trusted publishing pushes the same GitHub Release asset to RubyGems.org under the `buzzsprout` account (ID `256695`). That is what `gem install buzzsprout-cli` and `mise use -g gem:buzzsprout-cli` install.
 5. After the gem publish, the workflow builds a Homebrew formula with `script/homebrew-formula` and attaches `buzzsprout-cli.rb` to the same release. It then opens or updates a version-specific PR against the Buzzsprout Homebrew tap.
 
 ## One-time RubyGems setup
@@ -27,6 +27,14 @@ Do this once, after this workflow is on `main` and before the first tag. No Ruby
 4. Create that publisher when you are ready to tag the first release. If the publish job reports that the publisher is unknown, create the pending publisher again and re-run the workflow.
 
 After the first successful push, RubyGems turns the pending publisher into the gem's trusted publisher and makes that account an owner.
+
+To publish a gem already attached to a stable GitHub Release, run the release workflow from `main` with its existing tag:
+
+```bash
+gh workflow run release.yml --ref main -f tag=v0.1.1
+```
+
+This runs the RubyGems job and verifies the checksum if that version is already published.
 
 ## One-time Homebrew setup
 
