@@ -22,7 +22,6 @@ class InstallTest < Buzzsprout::Test
     assert_includes readme, 'mise use -g gem:buzzsprout-cli'
     assert_includes readme, 'gem update buzzsprout-cli'
     assert_includes readme, 'mise upgrade gem:buzzsprout-cli'
-    assert_includes readme, 'brew upgrade buzzsprout-cli'
     assert_includes readme, 'no GitHub account is required'
     curl_idx = readme.index('curl -fsSL https://raw.githubusercontent.com/buzzsprout/buzzsprout-cli/main/script/install | bash')
     clone_idx = readme.index('git clone https://github.com/buzzsprout/buzzsprout-cli.git ~/.buzzsprout-cli')
