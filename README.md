@@ -8,7 +8,7 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 
 - **First run** — braille startup animation of the Buzzsprout mark + wordmark (embedded in the CLI source), token prompt, live `GET /api/podcasts`, celebration, token saved to `~/.buzzsprout.json`
 - **Browser login** — OAuth with automatic refresh; API tokens remain supported for scripts
-- **Identifiable User-Agent** — `BuzzsproutCLI/0.1.0` on every request
+- **Identifiable User-Agent** — `BuzzsproutCLI/0.1.1` on every request
 - **Rate limits** — 60 req/min; retries `429` with backoff
 - **ETags** — sends `If-None-Match` on repeat GETs
 - **Agent skills** — `skills/` with one skill per API resource, plus `buzzsprout skills install`

@@ -50,7 +50,7 @@ Prefer `buzzsprout …` over raw HTTP. **Never** read `~/.buzzsprout.json` for t
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
-User-Agent: BuzzsproutCLI/0.1.0
+User-Agent: BuzzsproutCLI/0.1.1
 Accept: application/json
 ```
 

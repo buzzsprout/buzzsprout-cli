@@ -30,7 +30,7 @@ Uploading a custom transcript does not start Buzzsprout transcription. Deleting 
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
-User-Agent: BuzzsproutCLI/0.1.0
+User-Agent: BuzzsproutCLI/0.1.1
 Accept: application/json
 ```
 
@@ -41,7 +41,7 @@ JSON writes for high-fidelity: `Content-Type: application/json; charset=utf-8`. 
 ```bash
 curl -sS -X POST "https://www.buzzsprout.com/api/PODCAST_ID/episodes/EPISODE_ID/transcript" \
   -H "Authorization: Token token=YOUR_API_TOKEN" \
-  -H "User-Agent: BuzzsproutCLI/0.1.0" \
+  -H "User-Agent: BuzzsproutCLI/0.1.1" \
   -H "Accept: application/json" \
   -F "transcript_file=@episode.srt" \
   -F "transcript_format=srt"

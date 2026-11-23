@@ -24,7 +24,7 @@ POST creates the podcast's generic `verify` value, or replaces the existing one.
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
-User-Agent: BuzzsproutCLI/0.1.0
+User-Agent: BuzzsproutCLI/0.1.1
 Accept: application/json
 Content-Type: application/json; charset=utf-8
 ```
@@ -34,7 +34,7 @@ Content-Type: application/json; charset=utf-8
 ```bash
 curl -sS -X POST "https://www.buzzsprout.com/api/PODCAST_ID/feed_verifications" \
   -H "Authorization: Token token=YOUR_API_TOKEN" \
-  -H "User-Agent: BuzzsproutCLI/0.1.0" \
+  -H "User-Agent: BuzzsproutCLI/0.1.1" \
   -H "Content-Type: application/json; charset=utf-8" \
   -H "Accept: application/json" \
   -d '{"value":"owner@example.com","expires_at":"2027-09-01T00:00:00Z"}'

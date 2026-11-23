@@ -23,7 +23,7 @@ On update, send `{ "position": 1 }` (1-based; `0` is treated as `1`) and optiona
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
-User-Agent: BuzzsproutCLI/0.1.0
+User-Agent: BuzzsproutCLI/0.1.1
 Accept: application/json
 Content-Type: application/json; charset=utf-8
 ```
@@ -33,7 +33,7 @@ Content-Type: application/json; charset=utf-8
 ```bash
 curl -sS -X POST "https://www.buzzsprout.com/api/PODCAST_ID/podrolls" \
   -H "Authorization: Token token=YOUR_API_TOKEN" \
-  -H "User-Agent: BuzzsproutCLI/0.1.0" \
+  -H "User-Agent: BuzzsproutCLI/0.1.1" \
   -H "Content-Type: application/json; charset=utf-8" \
   -H "Accept: application/json" \
   -d '{"guid":"29cdca4a-32d8-56ba-b48b-09a011c5daa9","feed_url":"https://feeds.example.com/show.rss"}'

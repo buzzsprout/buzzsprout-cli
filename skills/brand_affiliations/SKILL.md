@@ -25,7 +25,7 @@ Deleting an affiliation removes it from **every** episode. `artwork` is an optio
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
-User-Agent: BuzzsproutCLI/0.1.0
+User-Agent: BuzzsproutCLI/0.1.1
 Accept: application/json
 Content-Type: application/json; charset=utf-8
 ```
@@ -35,7 +35,7 @@ Content-Type: application/json; charset=utf-8
 ```bash
 curl -sS -X POST "https://www.buzzsprout.com/api/PODCAST_ID/brand_affiliations" \
   -H "Authorization: Token token=YOUR_API_TOKEN" \
-  -H "User-Agent: BuzzsproutCLI/0.1.0" \
+  -H "User-Agent: BuzzsproutCLI/0.1.1" \
   -H "Content-Type: application/json; charset=utf-8" \
   -H "Accept: application/json" \
   -d '{"headline":"Acme","description":"10% off with code PODCAST","url":"https://acme.example"}'

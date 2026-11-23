@@ -24,7 +24,7 @@ These routes do **not** put a podcast id before `podcasts`.
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
-User-Agent: BuzzsproutCLI/0.1.0
+User-Agent: BuzzsproutCLI/0.1.1
 Accept: application/json
 Content-Type: application/json; charset=utf-8   # writes only
 ```
@@ -34,12 +34,12 @@ Content-Type: application/json; charset=utf-8   # writes only
 ```bash
 curl -sS "https://www.buzzsprout.com/api/podcasts" \
   -H "Authorization: Token token=YOUR_API_TOKEN" \
-  -H "User-Agent: BuzzsproutCLI/0.1.0" \
+  -H "User-Agent: BuzzsproutCLI/0.1.1" \
   -H "Accept: application/json"
 
 curl -sS -X PATCH "https://www.buzzsprout.com/api/podcasts/PODCAST_ID" \
   -H "Authorization: Token token=YOUR_API_TOKEN" \
-  -H "User-Agent: BuzzsproutCLI/0.1.0" \
+  -H "User-Agent: BuzzsproutCLI/0.1.1" \
   -H "Content-Type: application/json; charset=utf-8" \
   -H "Accept: application/json" \
   -d '{"title":"Life Empowerment","category":"Arts :: Books"}'

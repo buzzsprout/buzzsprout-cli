@@ -26,7 +26,7 @@ Submit requires a verified email and a podcast with a published episode, artwork
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
-User-Agent: BuzzsproutCLI/0.1.0
+User-Agent: BuzzsproutCLI/0.1.1
 Accept: application/json
 ```
 
@@ -35,7 +35,7 @@ Accept: application/json
 ```bash
 curl -sS -X POST "https://www.buzzsprout.com/api/PODCAST_ID/listings/submit_all" \
   -H "Authorization: Token token=YOUR_API_TOKEN" \
-  -H "User-Agent: BuzzsproutCLI/0.1.0" \
+  -H "User-Agent: BuzzsproutCLI/0.1.1" \
   -H "Accept: application/json"
 ```
 

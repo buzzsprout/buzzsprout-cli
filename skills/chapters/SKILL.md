@@ -25,7 +25,7 @@ Send `{ "chapters": [...] }` or a raw array. Omitting the array or sending anoth
 
 ```text
 Authorization: Token token=YOUR_API_TOKEN
-User-Agent: BuzzsproutCLI/0.1.0
+User-Agent: BuzzsproutCLI/0.1.1
 Accept: application/json
 Content-Type: application/json; charset=utf-8
 ```
@@ -35,7 +35,7 @@ Content-Type: application/json; charset=utf-8
 ```bash
 curl -sS -X PUT "https://www.buzzsprout.com/api/PODCAST_ID/episodes/EPISODE_ID/chapters" \
   -H "Authorization: Token token=YOUR_API_TOKEN" \
-  -H "User-Agent: BuzzsproutCLI/0.1.0" \
+  -H "User-Agent: BuzzsproutCLI/0.1.1" \
   -H "Content-Type: application/json; charset=utf-8" \
   -H "Accept: application/json" \
   -d '{"chapters":[{"title":"Intro","start_time":"00:00:00"},{"title":"Main","start_time":"00:01:30"}]}'
