@@ -1,0 +1,131 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  github:
+    needs: test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Build and verify the gem
+        run: |
+          gem build buzzsprout-cli.gemspec
+          script/verify-gem buzzsprout-cli-*.gem
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          gem_file=(buzzsprout-cli-*.gem)
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${gem_file[0]}" --clobber
+          else
+            gh release create "$tag" "${gem_file[0]}" --verify-tag --title "$tag" --generate-notes
+          fi
+
+  rubygems:
+    needs: github
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Confirm the tag is present for the gem version
+        run: |
+          version="$(ruby -Ilib -e 'require "buzzsprout/version"; print Buzzsprout::VERSION')"
+          test "$GITHUB_REF_NAME" = "v${version}"
+          git fetch --tags --force origin
+          git rev-parse "v${version}^{commit}" >/dev/null
+      - name: Skip when this version is already on RubyGems
+        id: published
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          url="https://rubygems.org/api/v2/rubygems/buzzsprout-cli/versions/${version}.json"
+          code="$(curl --silent --output /dev/null --write-out '%{http_code}' "$url")"
+          if [[ "$code" == "200" ]]; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Verify the gem before publishing
+        if: steps.published.outputs.already != 'true'
+        run: |
+          gem build buzzsprout-cli.gemspec
+          script/verify-gem buzzsprout-cli-*.gem
+          rm -f buzzsprout-cli-*.gem
+      - uses: rubygems/release-gem@v1
+        if: steps.published.outputs.already != 'true'
+
+  homebrew:
+    needs: rubygems
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate the Homebrew formula
+        run: |
+          tag="$GITHUB_REF_NAME"
+          version="${tag#v}"
+          url="https://github.com/buzzsprout/buzzsprout-cli/archive/refs/tags/${tag}.tar.gz"
+          for _ in 1 2 3 4 5; do
+            curl --silent --show-error --fail --location --output source.tar.gz "$url" && break
+            sleep 3
+          done
+          test -s source.tar.gz
+          sha="$(sha256sum source.tar.gz | awk '{print $1}')"
+          script/homebrew-formula "$version" "$sha" > buzzsprout-cli.rb
+      - name: Attach the formula to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" buzzsprout-cli.rb --clobber
+
+      - name: Check out the Buzzsprout tap
+        uses: actions/checkout@v4
+        with:
+          repository: buzzsprout/homebrew-tap
+          path: tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          persist-credentials: false
+      - name: Copy the release formula into the tap
+        run: install -Dm644 buzzsprout-cli.rb tap/Formula/buzzsprout-cli.rb
+      - name: Open or update the tap pull request
+        uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8
+        with:
+          path: tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          branch: buzzsprout-cli-${{ github.ref_name }}
+          add-paths: Formula/buzzsprout-cli.rb
+          commit-message: Update buzzsprout-cli to ${{ github.ref_name }}
+          title: Update buzzsprout-cli to ${{ github.ref_name }}
+          body: https://github.com/buzzsprout/buzzsprout-cli/releases/tag/${{ github.ref_name }}

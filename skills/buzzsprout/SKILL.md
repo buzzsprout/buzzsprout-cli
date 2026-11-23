@@ -49,11 +49,12 @@ First run with no args and no saved token starts login automatically. Config liv
 
 ## Updates
 
-- `buzzsprout update --check --json` checks whether the installed CLI differs from the latest `main`, without changing code or skills.
+- `buzzsprout update --check --json` reports `update_available` and `update_command` without changing code or skills.
+- Git installations: the check compares the checkout with the latest `main`. `update_command` is `buzzsprout update`. When the user requests an update, run that command. It updates the CLI and refreshes skills in detected agent directories (or the explicit skills destination).
+- Packaged installations use their package manager. `update_command` is `gem update buzzsprout-cli`, `mise upgrade gem:buzzsprout-cli`, or `brew upgrade buzzsprout-cli`. The check compares the installed version with the latest GitHub Release. When the user requests an update, run `update_command`, then `buzzsprout skills install`.
 - Normal commands may print an update notice on stderr; their JSON stdout remains unchanged. Tell the user when an update is available. Do not update software merely to answer a data question.
-- When the user requests an update, run `buzzsprout update`. This updates the CLI and refreshes skills in detected agent directories (or the explicit skills destination).
-- Start a new agent session after refreshing skills. Custom skill locations require `buzzsprout update --dir PATH` or a separate `buzzsprout skills install --dir PATH`.
-- Updates require a clean checkout of the official repository on `main`. Never reset local edits or switch a development branch to bypass a refusal.
+- Start a new agent session after refreshing skills. Custom skill locations on a Git install use `buzzsprout update --dir PATH`. Packaged installs use `buzzsprout skills install --dir PATH`.
+- Git updates require a clean checkout of the official repository on `main`. Never reset local edits or switch a development branch to bypass a refusal.
 - Set `BUZZSPROUT_NO_UPDATE_CHECK=1` to disable automatic checks. An explicit `update --check` still works.
 
 ## Base URL

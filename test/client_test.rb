@@ -15,7 +15,7 @@ class ClientTest < Buzzsprout::Test
     assert_equal :get, request[:method]
     assert_equal '/api/podcasts', request[:uri].request_uri
     assert_equal 'Token token=abc123', request[:headers]['Authorization']
-    assert_equal 'BuzzsproutCLI/0.1.0', request[:headers]['User-Agent']
+    assert_equal "BuzzsproutCLI/#{Buzzsprout::VERSION}", request[:headers]['User-Agent']
     assert_equal 'application/json', request[:headers]['Accept']
   end
 
@@ -102,6 +102,6 @@ class ClientTest < Buzzsprout::Test
     client.put_bytes('https://uploads.example.com/x', 'bytes')
     headers = transport.requests.first[:headers]
     refute headers.key?('Authorization')
-    assert_equal 'BuzzsproutCLI/0.1.0', headers['User-Agent']
+    assert_equal "BuzzsproutCLI/#{Buzzsprout::VERSION}", headers['User-Agent']
   end
 end

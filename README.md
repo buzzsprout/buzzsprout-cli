@@ -15,6 +15,10 @@ Modeled on [basecamp-cli](https://github.com/robzolkos/ruby-basecamp-cli): Ruby 
 
 ## Installation
 
+Git installs track `main`. RubyGems, mise, and Homebrew installs come from tagged releases (`v0.1.1` and later). See [RELEASING.md](RELEASING.md).
+
+### Git
+
 On macOS or Linux, install Ruby 3.0+ and Git, then run:
 
 ```bash
@@ -34,7 +38,30 @@ buzzsprout login
 
 If you already have a checkout, run `./script/install` from its root.
 
+Installer overrides: `BUZZSPROUT_CLI_HOME` (clone directory), `BUZZSPROUT_CLI_BIN` (executable directory), `BUZZSPROUT_CLI_REPO` (Git remote), and `BUZZSPROUT_CLI_REF` (branch or tag, default `main`).
+
+### RubyGems and mise
+
+After a release is on RubyGems:
+
+```bash
+gem install buzzsprout-cli
+buzzsprout login
+```
+
+mise installs that gem:
+
+```bash
+mise use -g gem:buzzsprout-cli
+```
+
+### Homebrew
+
+Once the first release formula is merged into the Buzzsprout tap, install it with `brew install buzzsprout/tap/buzzsprout-cli`.
+
 ### Updating
+
+Git installations keep their current update path. From a clean checkout of the official repository on `main`:
 
 ```bash
 buzzsprout update                  # update CLI and refresh agent skills
@@ -42,15 +69,23 @@ buzzsprout update --check          # check without installing
 buzzsprout update --check --json   # machine-readable check for AI assistants
 ```
 
-Updates follow `main`, so changes to commands, the public OAuth client ID, and skills are detected even when the version number hasn't changed. The updater only fast-forwards clean installations of the official repository on `main`; it refuses local edits, other branches, and divergent history. Your login and saved podcast are preserved. Gem installations should use `gem update buzzsprout-cli` instead.
+Updates follow `main`, so changes to commands, the public OAuth client ID, and skills are detected even when the version number hasn't changed. The updater only fast-forwards clean installations of the official repository on `main`; it refuses local edits, other branches, and divergent history. Your login and saved podcast are preserved.
 
 Skills refresh in detected Claude Code and Cursor directories, or the destination selected by `BUZZSPROUT_SKILLS_DIR` / `--dir`. For a custom location, run `buzzsprout update --dir PATH`. Previous skill copies are backed up. Start a new AI session after refreshing skills. If the skill refresh fails, the CLI update remains installed and the command reports how to retry.
 
-Normal commands check GitHub at most once a day and print update notices on stderr, preserving JSON stdout. Checks have a three-second network timeout; offline or rate-limited checks do not fail the command. Automatic checks are skipped in CI, for development/dirty checkouts, and when `BUZZSPROUT_NO_UPDATE_CHECK=1`. Explicit `update --check` always requests a fresh result. Nothing updates automatically.
+Packaged installations use their package manager:
 
-Older installations without the update command can be updated from a clean `main` checkout with `git pull --ff-only`, then `./script/install` and `buzzsprout skills install`.
+| Install | Update |
+| --- | --- |
+| RubyGems | `gem update buzzsprout-cli` |
+| mise | `mise upgrade gem:buzzsprout-cli` |
+| Homebrew | `brew upgrade buzzsprout-cli` |
 
-Installer overrides: `BUZZSPROUT_CLI_HOME` (clone directory), `BUZZSPROUT_CLI_BIN` (executable directory), `BUZZSPROUT_CLI_REPO` (Git remote), and `BUZZSPROUT_CLI_REF` (branch or tag, default `main`).
+`buzzsprout update` on a packaged installation prints that command and leaves the files in place. `buzzsprout update --check` compares the installed version with the latest GitHub Release. JSON output includes `update_command`. After the package manager finishes, run `buzzsprout skills install` to refresh copied agent skills. A custom destination uses `buzzsprout skills install --dir PATH`.
+
+Normal commands check for updates at most once a day and print notices on stderr, preserving JSON stdout. Git installs compare against `main`. Packaged installs compare against the latest release and name their package manager. Checks have a three-second network timeout; offline or rate-limited checks do not fail the command. Automatic checks are skipped in CI, for dirty or non-main checkouts and source trees, and when `BUZZSPROUT_NO_UPDATE_CHECK=1`. Explicit `update --check` always requests a fresh result. Nothing updates automatically.
+
+Older Git installations without the update command can be updated from a clean `main` checkout with `git pull --ff-only`, then `./script/install` and `buzzsprout skills install`.
 
 ### From source
 
@@ -219,6 +254,10 @@ bundle exec rake test
 ```
 
 Tests use a local fake API (no real tokens). Do not put API tokens in this repo.
+
+## Releasing
+
+`script/release 0.1.1` bumps the version and tags `v0.1.1`. Pushing the tag publishes the GitHub Release, the gem, and a Homebrew formula. Details: [RELEASING.md](RELEASING.md).
 
 Endpoint shapes follow [buzzsprout/buzzsprout-api#56](https://github.com/buzzsprout/buzzsprout-api/pull/56).
 

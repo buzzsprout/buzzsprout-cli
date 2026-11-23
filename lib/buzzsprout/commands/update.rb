@@ -4,7 +4,7 @@ module Buzzsprout
   module Commands
     class Update < Base
       HELP_PAGE = {
-        summary: 'Update the CLI and refresh bundled agent skills.',
+        summary: 'Update a Git installation and refresh bundled agent skills.',
         usage: 'buzzsprout update [--check] [--json] [--dir PATH]',
         flags: [['--check', 'Check for updates without installing'], ['--json', 'Print machine-readable results'],
                 ['--dir PATH', 'Skills destination override']],
@@ -18,7 +18,12 @@ module Buzzsprout
         result = check_only ? updater.check : updater.update(io: @err, dir: @options.dir)
         output(result) do
           if check_only
-            @io.puts(result[:update_available] ? 'Update available. Run: buzzsprout update' : 'Buzzsprout CLI is up to date.')
+            if result[:update_available]
+              @io.puts "Update available. Run: #{result[:update_command]}"
+              @io.puts 'Then run: buzzsprout skills install' unless result[:distribution].nil? || result[:distribution] == 'git'
+            else
+              @io.puts 'Buzzsprout CLI is up to date.'
+            end
           else
             @io.puts(result[:updated] ? 'Buzzsprout CLI updated.' : 'Buzzsprout CLI is up to date.')
             @io.puts 'Start a new AI session to load refreshed skills.' if result[:skills_refreshed]
